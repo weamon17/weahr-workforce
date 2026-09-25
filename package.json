@@ -1,0 +1,58 @@
+{
+  "name": "coffee-management",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "test": "node --test",
+    "check:functions": "npm --prefix functions run check",
+    "mail:start": "npm --prefix mail-server start",
+    "mail:test": "npm --prefix mail-server test",
+    "mail:check": "npm --prefix mail-server run check",
+    "seed:accounts": "node --env-file=.env.local scripts/seed-accounts.mjs",
+    "seed:test-admin": "node --env-file=.env.local mail-server/scripts/createTestAdmin.js",
+    "verify:test-admin": "node --env-file=.env.local scripts/verify-test-admin.mjs",
+    "verify:attendance-api": "node --env-file=.env.local scripts/verify-attendance-api.mjs",
+    "preview": "vite preview",
+    "check": "npm run lint && npm run test && npm run check:functions && npm run mail:check && npm run mail:test && npm run build"
+  },
+  "dependencies": {
+    "firebase": "^12.11.0",
+    "i18next": "^26.0.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-i18next": "^17.0.2",
+    "read-excel-file": "^9.3.2",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@eslint/js": "^9.39.4",
+    "@rolldown/plugin-babel": "^0.2.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "vite": "^8.0.1"
+  },
+  "description": "Role-based workforce management SaaS MVP for cafes and small F&B businesses.",
+  "main": "eslint.config.js",
+  "keywords": [
+    "saas",
+    "workforce-management",
+    "attendance",
+    "payroll",
+    "firebase",
+    "react"
+  ],
+  "author": "",
+  "license": "ISC"
+}

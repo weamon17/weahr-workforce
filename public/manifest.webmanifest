@@ -1,0 +1,52 @@
+{
+  "id": "/",
+  "name": "WeaHR — Quản lý nhân sự F&B",
+  "short_name": "WeaHR",
+  "description": "Chấm công, xếp ca, tính lương và phân tích hiệu quả nhân sự cho cửa hàng F&B.",
+  "lang": "vi",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/wea-hr-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Chấm công",
+      "short_name": "Chấm công",
+      "description": "Mở màn hình chấm công WeaHR",
+      "url": "/?source=pwa&view=attendance",
+      "icons": [
+        {
+          "src": "/wea-hr-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Lịch làm",
+      "short_name": "Lịch làm",
+      "description": "Mở lịch làm việc WeaHR",
+      "url": "/?source=pwa&view=schedule",
+      "icons": [
+        {
+          "src": "/wea-hr-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

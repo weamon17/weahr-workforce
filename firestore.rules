@@ -1,0 +1,289 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActiveUser() {
+      return signedIn() && userProfile().data.status == 'active';
+    }
+
+    function isManager() {
+      return isActiveUser()
+        && userProfile().data.role == 'manager'
+        && userProfile().data.organizationId is string;
+    }
+
+    function isOrganizationOwner() {
+      return isManager() && userProfile().data.isOrganizationOwner == true;
+    }
+
+    function organizationId() {
+      return userProfile().data.organizationId;
+    }
+
+    function ownEmployeeProfile() {
+      return get(/databases/$(database)/documents/employee_profiles/$(request.auth.uid));
+    }
+
+    function sameOrganization() {
+      return isActiveUser()
+        && resource.data.organizationId == organizationId();
+    }
+
+    function sameNewOrganization() {
+      return isActiveUser()
+        && request.resource.data.organizationId == organizationId();
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function ownsResource() {
+      return isActiveUser() && resource.data.employeeId == request.auth.uid;
+    }
+
+    function ownsNewResource() {
+      return isActiveUser() && request.resource.data.employeeId == request.auth.uid;
+    }
+
+    // Scheduling inputs an employee submits must mirror their manager-set profile.
+    // Profiles created before multi-skill support fall back to the position.
+    function matchesOwnProfile(data) {
+      let profile = ownEmployeeProfile().data;
+      return data.position == profile.get('position', '')
+        && data.hourlyRate == profile.get('hourlyRate', 0)
+        && ((('skills' in profile) && data.skills == profile.skills)
+          || (!('skills' in profile)
+            && data.skills.size() <= 1
+            && (data.skills.size() == 0 || data.skills[0] == profile.get('position', ''))));
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || (isManager() && sameOrganization());
+      // New users are provisioned by trusted callable functions after an
+      // organization signup or a valid employee invitation is accepted.
+      allow create: if false;
+      allow update: if isActiveUser() && isOwner(userId)
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.organizationId == resource.data.organizationId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['fullName', 'phone', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /employee_profiles/{userId} {
+      allow read: if (isActiveUser() && isOwner(userId)) || (isManager() && sameOrganization());
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if (isManager() && sameOrganization() && sameNewOrganization())
+        || (isActiveUser() && isOwner(userId)
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.organizationId == resource.data.organizationId
+          && request.resource.data.salary == resource.data.salary
+          && request.resource.data.hourlyRate == resource.data.hourlyRate
+          && request.resource.data.employeeType == resource.data.employeeType
+          && request.resource.data.employmentStatus == resource.data.employmentStatus
+          && request.resource.data.position == resource.data.position
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['fullName', 'phone', 'address', 'dateOfBirth', 'updatedAt']));
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /organizations/{organizationDocumentId} {
+      allow read: if isActiveUser() && organizationDocumentId == organizationId();
+      allow update: if isOrganizationOwner()
+        && organizationDocumentId == organizationId()
+        && request.resource.data.organizationId == resource.data.organizationId
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'updatedAt']);
+      allow create, delete: if false;
+    }
+
+    match /organization_invitations/{invitationId} {
+      allow read: if isManager() && sameOrganization();
+      // Tokens and invitation state are written only by callable functions.
+      allow create, update, delete: if false;
+    }
+
+    // HR master data contains salary and personal information.
+    match /employees/{employeeId} {
+      allow read, delete: if isManager() && sameOrganization();
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+    }
+
+    match /timesheets/{recordId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      // Employee attendance writes must go through trusted callable functions.
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /attendance_settings/{organizationDocumentId} {
+      allow read: if isActiveUser() && organizationDocumentId == organizationId();
+      allow create: if isManager() && organizationDocumentId == organizationId() && sameNewOrganization();
+      allow update: if isManager() && organizationDocumentId == organizationId()
+        && sameOrganization() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /attendance_qr/{organizationDocumentId} {
+      allow read, write: if false;
+    }
+
+    match /employee_devices/{deviceDocumentId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      allow delete: if isManager() && sameOrganization();
+      allow create, update: if false;
+    }
+
+    match /attendance_exceptions/{exceptionId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      allow create, update, delete: if false;
+    }
+
+    // Rate-limit state is managed only by trusted email Cloud Functions.
+    match /email_dispatch_limits/{documentId} {
+      allow read, write: if false;
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      allow create: if (isManager() && sameNewOrganization())
+        || (ownsNewResource()
+          && sameNewOrganization()
+          && request.resource.data.status == 'pending'
+          && request.resource.data.scheduleType in ['shift_request', 'off_request']);
+      allow update: if (isManager() && sameOrganization() && sameNewOrganization())
+        || (ownsResource()
+          && request.resource.data.employeeId == resource.data.employeeId
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if (isManager() && sameOrganization()) || (isActiveUser() && resource.data.recipientId == request.auth.uid);
+      allow create: if isManager() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+      allow update: if (isManager() && sameOrganization() && sameNewOrganization())
+        || (isActiveUser()
+          && resource.data.recipientId == request.auth.uid
+          && request.resource.data.recipientId == resource.data.recipientId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']));
+    }
+
+    match /payrolls/{documentId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /bonuses/{documentId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /penalties/{documentId} {
+      allow read: if (isManager() && sameOrganization()) || ownsResource();
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    // Audit history is append-only so payroll disputes keep their evidence.
+    match /audit_logs/{documentId} {
+      allow read: if isManager() && sameOrganization();
+      allow create: if isManager() && sameNewOrganization();
+      allow update, delete: if false;
+    }
+
+    match /schedule_settings/{organizationDocumentId} {
+      allow read: if isActiveUser() && organizationDocumentId == organizationId();
+      allow create: if isManager()
+        && organizationDocumentId == organizationId()
+        && sameNewOrganization();
+      allow update: if isManager()
+        && organizationDocumentId == organizationId()
+        && sameOrganization()
+        && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /availability_submissions/{submissionId} {
+      // Reading a missing document reveals nothing and lets first-time users load the page.
+      allow read: if (isActiveUser() && resource == null)
+        || (isManager() && sameOrganization()) || ownsResource();
+      allow create: if ownsNewResource()
+        && sameNewOrganization()
+        && matchesOwnProfile(request.resource.data);
+      allow update: if ownsResource()
+        && request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.organizationId == resource.data.organizationId
+        && request.resource.data.weekStart == resource.data.weekStart
+        && matchesOwnProfile(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['selectedSlotIds', 'submittedAt', 'status', 'position', 'hourlyRate', 'skills']);
+      allow delete: if (isManager() && sameOrganization()) || ownsResource();
+    }
+
+    match /weekly_assignments/{assignmentId} {
+      allow read: if (isActiveUser() && resource == null)
+        || (isManager() && sameOrganization()) || ownsResource();
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /shift_swap_requests/{requestId} {
+      allow read: if isActiveUser() && sameOrganization();
+      // Employees may only offer their own shift as a fresh open request.
+      // Ownership of the shift itself is re-verified when a manager approves.
+      allow create: if isActiveUser()
+        && request.resource.data.fromEmployeeId == request.auth.uid
+        && sameNewOrganization()
+        && request.resource.data.status == 'open'
+        && !('claimedBy' in request.resource.data);
+      // Besides the manager: the offering employee may re-open a rejected or cancelled offer,
+      // and a colleague may claim an open shift (only a manager can approve it).
+      allow update: if (isManager() && sameOrganization() && sameNewOrganization())
+        || (sameOrganization()
+          && resource.data.fromEmployeeId == request.auth.uid
+          && resource.data.status in ['rejected', 'cancelled']
+          && request.resource.data.fromEmployeeId == request.auth.uid
+          && request.resource.data.organizationId == resource.data.organizationId
+          && request.resource.data.status == 'open'
+          && !('claimedBy' in request.resource.data))
+        || (sameOrganization()
+          && resource.data.status == 'open'
+          && resource.data.fromEmployeeId != request.auth.uid
+          && request.resource.data.status == 'claimed'
+          && request.resource.data.claimedBy == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedBy', 'claimedByName', 'claimedAt', 'status']));
+      allow delete: if isManager() && sameOrganization();
+    }
+
+    match /sales_records/{recordId} {
+      allow read, delete: if isManager() && sameOrganization();
+      allow create: if isManager() && sameNewOrganization();
+      allow update: if isManager() && sameOrganization() && sameNewOrganization();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
