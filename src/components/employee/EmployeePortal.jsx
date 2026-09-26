@@ -74,10 +74,8 @@ export default function EmployeePortal({ currentUser, empProfile, showToast }) {
   // Real-time listener for notifications — updates immediately when manager sends one
   useEffect(() => {
     if (!currentUser) return;
-    console.log('[NotifListener] starting for uid =', currentUser.uid);
     const q = query(collection(db, 'notifications'), where('recipientId', '==', currentUser.uid));
     const unsub = onSnapshot(q, (snap) => {
-      console.log('[NotifListener] snapshot received, docs =', snap.docs.length);
       const notifs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {

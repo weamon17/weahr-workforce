@@ -91,7 +91,6 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
     // Notification — separate try/catch so approve result is not affected
     try {
       const rid = getRecipientId(schedule);
-      console.log('[handleApprove] recipientId =', rid, '| schedule.employeeId =', schedule.employeeId);
       await pushNotification(
         rid,
         schedule.employeeName,
@@ -128,7 +127,6 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
     // Notification — separate try/catch
     try {
       const rid = getRecipientId(schedule);
-      console.log('[handleReject] recipientId =', rid, '| schedule.employeeId =', schedule.employeeId);
       await pushNotification(
         rid,
         schedule.employeeName,
