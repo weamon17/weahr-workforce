@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { requestAttendanceQr, resolveAttendanceException } from '../../services/attendanceApi';
+import KioskDevicesCard from './KioskDevicesCard';
 
 const defaults = {
   latitude: '',
@@ -14,7 +15,7 @@ const defaults = {
   maxGpsAccuracyMeters: 80,
 };
 
-export default function AttendanceSecurityPanel({ organizationId, db, showToast }) {
+export default function AttendanceSecurityPanel({ organizationId, db, showToast, showConfirm }) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState(defaults);
   const [saving, setSaving] = useState(false);
@@ -144,7 +145,7 @@ export default function AttendanceSecurityPanel({ organizationId, db, showToast 
           <h2 style={{ margin: 0 }}>{t('attendance.title')}</h2>
           <p style={{ color: 'var(--text-muted)', margin: '6px 0 0' }}>{t('attendance.subtitle')}</p>
         </div>
-        <span style={{ background: '#dcfce7', color: '#1f6b44', padding: '7px 11px', borderRadius: '999px', fontWeight: 700 }}>Server verified</span>
+        <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '7px 11px', borderRadius: '999px', fontWeight: 700 }}><i className="fas fa-shield-halved" aria-hidden="true"></i> {t('attendance.server_verified')}</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)', gap: '22px', marginTop: '20px' }}>
@@ -180,12 +181,14 @@ export default function AttendanceSecurityPanel({ organizationId, db, showToast 
         </div>
       </div>
 
+      <KioskDevicesCard db={db} organizationId={organizationId} showToast={showToast} showConfirm={showConfirm} />
+
       <div style={{ marginTop: '22px' }}>
         <h3>{t('attendance.exceptions_title', { count: exceptions.length })}</h3>
         {exceptions.length === 0 ? <p style={{ color: '#75665b' }}>{t('attendance.no_exceptions')}</p> : exceptions.map(item => (
           <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', borderTop: '1px solid #ece2d6', padding: '12px 0', flexWrap: 'wrap' }}>
             <div>
-              <b>{item.employeeName}</b> · {item.action === 'check_in' ? 'Check-in' : 'Check-out'} {t('attendance.attempt_at', { time: item.attemptedTime })}
+              <b>{item.employeeName}</b> · {item.action === 'check_in' ? t('portal.btn_checkin') : t('portal.btn_checkout')} {t('attendance.attempt_at', { time: item.attemptedTime })}
               <div style={{ color: '#b45309', fontSize: '.88rem' }}>{t(`attendance.reason_${item.reason}`, { defaultValue: item.reason })}{item.distance != null ? t('attendance.distance_away', { meters: item.distance }) : ''}</div>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>

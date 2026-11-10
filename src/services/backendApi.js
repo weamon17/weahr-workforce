@@ -1,13 +1,5 @@
 import { auth } from '../firebase';
-
-const configuredApiUrl = String(
-  import.meta.env.VITE_BACKEND_API_URL
-  || import.meta.env.VITE_MAIL_API_URL
-  || '',
-).trim();
-
-const apiUrl = (configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:8787' : ''))
-  .replace(/\/+$/, '');
+import { backendUrl as apiUrl } from './backendUrl';
 
 // Authenticated POST to the WeaHR Node backend (attendance, billing).
 export const callBackend = async (path, body = {}, { notConfiguredMessage, fallbackMessage, errorCode }) => {

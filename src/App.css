@@ -1035,3 +1035,35 @@ button:active:not(:disabled) { transform: scale(0.98); }
   .billing-status { width: 100%; }
   .pay-row-label { width: 92px; }
 }
+
+/* =========================================================
+   14. COUNTER KIOSK DEVICES (manager side)
+========================================================= */
+.kiosk-devices { margin-top: 22px; padding: 20px; border-radius: var(--radius-lg); background: var(--cream-100); border: 1px solid var(--border); }
+.kiosk-devices-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.kiosk-devices-head h3 { margin: 0; display: flex; align-items: center; gap: 10px; }
+.kiosk-devices-head h3 i { color: var(--caramel-600); }
+.kiosk-devices-head p { margin: 4px 0 0; color: var(--text-muted); max-width: 520px; line-height: 1.5; }
+.kiosk-pair-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.kiosk-pair-form input { width: 220px; background: #fff; }
+.kiosk-pairing { display: flex; gap: 20px; align-items: flex-start; margin-top: 16px; padding: 18px; border-radius: var(--radius-md); background: #fff; border: 1.5px solid var(--caramel-500); }
+.kiosk-pairing-qr { flex-shrink: 0; width: 180px; height: 180px; display: grid; place-items: center; }
+.kiosk-pairing-text { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.kiosk-pairing-text strong { font-size: 1.05rem; }
+.kiosk-pairing-text ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; color: var(--text-body); }
+.kiosk-pairing-link { display: flex; gap: 8px; }
+.kiosk-pairing-link input { flex: 1; min-width: 0; font-size: 0.85rem; }
+.kiosk-pairing-warning { display: flex; gap: 8px; margin: 0; color: var(--warning); font-size: 0.9rem; }
+.kiosk-devices-empty { margin: 14px 0 0; color: var(--text-muted); }
+.kiosk-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.kiosk-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-md); background: #fff; border: 1px solid var(--border); }
+.kiosk-list li.is-revoked { opacity: 0.55; }
+.kiosk-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cream-400); flex-shrink: 0; }
+.kiosk-dot.is-online { background: var(--success); box-shadow: 0 0 0 4px var(--success-soft); }
+.kiosk-list-main { flex: 1; min-width: 0; display: grid; }
+.kiosk-list-main small { color: var(--text-muted); }
+@media (max-width: 700px) {
+  .kiosk-pair-form, .kiosk-pair-form input { width: 100%; }
+  .kiosk-pairing { flex-direction: column; align-items: center; }
+  .kiosk-pairing-link { flex-direction: column; }
+}

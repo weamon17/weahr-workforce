@@ -70,6 +70,7 @@ beforeEach(async () => {
       setDoc(doc(admin, 'organizations', ORG_A), { organizationId: ORG_A, ownerId: 'ownerA', name: 'Quán A', plan: 'trial', subscriptionStatus: 'trialing' }),
       setDoc(doc(admin, 'billing_orders', 'WEAAAAAAAA2'), { organizationId: ORG_A, code: 'WEAAAAAAAA2', amount: 399000, status: 'pending' }),
       setDoc(doc(admin, 'billing_transactions', 'sepay_1'), { organizationId: ORG_A, amount: 399000 }),
+      setDoc(doc(admin, 'attendance_kiosks', 'kiosk-a'), { organizationId: ORG_A, name: 'Quầy', status: 'active', tokenHash: 'x' }),
     ]);
   });
 });
@@ -199,5 +200,18 @@ describe('billing', () => {
   test('an owner can rename the shop but cannot activate a plan', async () => {
     await assertSucceeds(updateDoc(doc(db('ownerA'), 'organizations', ORG_A), { name: 'Quán A mới' }));
     await assertFails(updateDoc(doc(db('ownerA'), 'organizations', ORG_A), { subscriptionStatus: 'active', plan: 'chain' }));
+  });
+});
+
+describe('counter kiosks', () => {
+  test('managers list their kiosks; employees and other shops cannot', async () => {
+    await assertSucceeds(getDoc(doc(db('managerA'), 'attendance_kiosks', 'kiosk-a')));
+    await assertFails(getDoc(doc(db('employeeA1'), 'attendance_kiosks', 'kiosk-a')));
+    await assertFails(getDoc(doc(db('employeeB'), 'attendance_kiosks', 'kiosk-a')));
+  });
+
+  test('kiosks are paired and revoked only through the backend', async () => {
+    await assertFails(setDoc(doc(db('managerA'), 'attendance_kiosks', 'kiosk-new'), { organizationId: ORG_A, status: 'active' }));
+    await assertFails(updateDoc(doc(db('managerA'), 'attendance_kiosks', 'kiosk-a'), { status: 'revoked' }));
   });
 });

@@ -9,6 +9,7 @@ WeaHR is a workforce-management SaaS MVP for cafés and small F&B businesses. It
 ### Manager
 
 - Rotating 30–60 second attendance QR, GPS geofence, server timestamps, approved-shift enforcement, device limits, anomaly requests, and manager exception approval
+- Counter kiosk mode: pair a shared tablet once with a link or QR code; it shows the shop's rotating QR full-screen without any signed-in account, and can be revoked at any time
 - Attendance and manual timesheet management with edit audit logs
 - Full-time and part-time employee profiles
 - Shift-request approval and employee notifications
@@ -38,6 +39,8 @@ WeaHR is a workforce-management SaaS MVP for cafés and small F&B businesses. It
 - Employee-owned records use `employeeId` for ownership checks.
 - Employee check-in/check-out writes are denied directly by Firestore and only accepted through the authenticated attendance API in `mail-server/` (`/v1/attendance/*`).
 - QR token, expiry, geofence, current shift, server time, and device policy are verified on the server.
+- Each display (the manager screen and every paired kiosk) rotates its own QR token in `attendance_qr`, so screens never invalidate each other; a token that was just rotated out stays valid for 20 seconds.
+- Kiosks authenticate with `Authorization: Kiosk <kioskId>.<secret>`. Only a SHA-256 hash of the secret is stored in `attendance_kiosks`; the credential can do nothing except fetch that shop's QR. Pairing and revoking go through `/v1/attendance/kiosks`.
 - Email verification uses Firebase Authentication. The former browser-generated OTP server was removed.
 
 Firebase Web configuration values are client identifiers, not authorization secrets. Authorization is enforced in [firestore.rules](./firestore.rules).

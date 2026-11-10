@@ -140,6 +140,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Paired counter kiosks. Pairing and revoking go through the attendance
+    // backend; managers only list them (the stored hash cannot be reversed).
+    match /attendance_kiosks/{kioskId} {
+      allow read: if isManager() && sameOrganization();
+      allow create, update, delete: if false;
+    }
+
     match /employee_devices/{deviceDocumentId} {
       allow read: if (isManager() && sameOrganization()) || ownsResource();
       allow delete: if isManager() && sameOrganization();

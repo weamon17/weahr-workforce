@@ -101,3 +101,24 @@ export const calculateAttendanceHours = ({ checkInAt, checkOutAt, schedule, empl
     otCalculationMode: employeeProfile.employeeType === 'fulltime' ? scheduleMode : 'hourly',
   };
 };
+
+// ── QR tokens ─────────────────────────────────────────────────────────────
+
+// A token that was just rotated out stays valid briefly, so an employee who
+// scanned a moment before the screen changed is not rejected.
+export const QR_ROTATION_GRACE_MS = 20 * 1000;
+
+// Each display (manager screen or a paired counter kiosk) rotates its own
+// token, so two screens never invalidate each other's code.
+export const qrDocumentId = (organizationId, source = '') => {
+  const safeSource = String(source || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+  return safeSource ? `${organizationId}__${safeSource}` : organizationId;
+};
+
+export const isQrTokenAccepted = ({ qr, token, nowMs, tokenEquals }) => {
+  if (!qr || !token) return false;
+  if (tokenEquals(qr.token, token) && (qr.expiresAtMs || 0) > nowMs) return true;
+  return Boolean(qr.previousToken)
+    && tokenEquals(qr.previousToken, token)
+    && (qr.previousValidUntilMs || 0) > nowMs;
+};

@@ -2,13 +2,18 @@ import crypto from 'node:crypto';
 import express from 'express';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
+  QR_ROTATION_GRACE_MS,
   calculateAttendanceHours,
   distanceMeters,
   isCheckInWithinWindow,
+  isQrTokenAccepted,
   isValidCoordinate,
   previousDate,
+  qrDocumentId,
   vietnamDateAndTime,
 } from './attendanceLogic.js';
+
+const MAX_ACTIVE_KIOSKS = 10;
 
 const safeId = value => String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 1200);
 const bearerToken = request => String(request.headers.authorization || '').match(/^Bearer\s+(.+)$/i)?.[1] || '';
@@ -82,14 +87,68 @@ export const createAttendanceRouter = ({ auth, firestore }) => {
     if (payload?.version !== 1 || payload.organizationId !== organizationId || !payload.token) {
       throw new ApiError(403, 'wrong-organization-qr', 'Mã QR không thuộc cửa hàng này.');
     }
-    const snapshot = await firestore.collection('attendance_qr').doc(organizationId).get();
+    const snapshot = await firestore.collection('attendance_qr').doc(qrDocumentId(organizationId, payload.source)).get();
     const qr = snapshot.data();
-    if (!snapshot.exists || !secureTokenEquals(qr?.token, payload.token)) {
-      throw new ApiError(409, 'expired-qr', 'Mã QR đã hết hạn.');
+    const accepted = snapshot.exists && isQrTokenAccepted({
+      qr: {
+        token: qr?.token,
+        expiresAtMs: qr?.expiresAt?.toMillis?.() || 0,
+        previousToken: qr?.previousToken,
+        previousValidUntilMs: qr?.previousValidUntil?.toMillis?.() || 0,
+      },
+      token: payload.token,
+      nowMs: Date.now(),
+      tokenEquals: secureTokenEquals,
+    });
+    if (!accepted) throw new ApiError(409, 'expired-qr', 'Mã QR đã hết hạn, hãy quét mã mới.');
+  };
+
+  // Rotates the token of one display and returns the payload to encode.
+  const issueQr = async ({ organizationId, source = '', issuedBy, settings }) => {
+    const ttlSeconds = Math.min(60, Math.max(30, Number(settings.qrTtlSeconds) || 45));
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
+    const token = crypto.randomBytes(24).toString('base64url');
+    const reference = firestore.collection('attendance_qr').doc(qrDocumentId(organizationId, source));
+    const previous = (await reference.get()).data();
+    const previousValid = previous?.token && (previous.expiresAt?.toMillis?.() || 0) > now.getTime() - QR_ROTATION_GRACE_MS;
+    await reference.set({
+      organizationId,
+      source: source || 'manager',
+      token,
+      issuedBy,
+      issuedAt: Timestamp.fromDate(now),
+      expiresAt: Timestamp.fromDate(expiresAt),
+      previousToken: previousValid ? previous.token : null,
+      previousValidUntil: previousValid ? Timestamp.fromMillis(now.getTime() + QR_ROTATION_GRACE_MS) : null,
+    });
+    return {
+      qrPayload: JSON.stringify({ version: 1, organizationId, token, ...(source ? { source } : {}) }),
+      expiresAt: expiresAt.getTime(),
+      ttlSeconds,
+    };
+  };
+
+  const loadAttendanceSettings = async organizationId => {
+    const settingsSnap = await firestore.collection('attendance_settings').doc(organizationId).get();
+    if (!settingsSnap.exists) throw new ApiError(409, 'settings-required', 'Cửa hàng chưa cấu hình chấm công.');
+    return settingsSnap.data();
+  };
+
+  // Counter kiosks authenticate with "Authorization: Kiosk <kioskId>.<secret>".
+  // The credential only ever allows showing this shop's attendance QR.
+  const requireKiosk = async request => {
+    const [, kioskId, secret] = String(request.headers.authorization || '')
+      .match(/^Kiosk\s+([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/) || [];
+    if (!kioskId || !secret) throw new ApiError(401, 'kiosk-unauthenticated', 'Máy quầy chưa được ghép với cửa hàng.');
+    const snapshot = await firestore.collection('attendance_kiosks').doc(kioskId).get();
+    const kiosk = snapshot.data();
+    const hash = crypto.createHash('sha256').update(secret).digest('hex');
+    if (!snapshot.exists || !secureTokenEquals(kiosk?.tokenHash, hash)) {
+      throw new ApiError(401, 'kiosk-unauthenticated', 'Mã ghép máy quầy không hợp lệ.');
     }
-    if ((qr.expiresAt?.toMillis?.() || 0) <= Date.now()) {
-      throw new ApiError(409, 'expired-qr', 'Mã QR đã hết hạn, hãy quét mã mới.');
-    }
+    if (kiosk.status !== 'active') throw new ApiError(403, 'kiosk-revoked', 'Máy quầy này đã bị thu hồi.');
+    return { id: kioskId, ...kiosk };
   };
 
   const loadSchedule = async (user, scheduleId, action, local, settings) => {
@@ -203,26 +262,60 @@ export const createAttendanceRouter = ({ auth, firestore }) => {
 
   router.post('/qr', route(async request => {
     const manager = await requireManager(request);
-    const settingsSnap = await firestore.collection('attendance_settings').doc(manager.organizationId).get();
-    if (!settingsSnap.exists) {
-      throw new ApiError(409, 'settings-required', 'Cửa hàng chưa cấu hình chấm công.');
+    const settings = await loadAttendanceSettings(manager.organizationId);
+    return issueQr({ organizationId: manager.organizationId, issuedBy: manager.uid, settings });
+  }));
+
+  // ── Counter kiosks ──────────────────────────────────────────────────────
+
+  router.post('/kiosks', route(async request => {
+    const manager = await requireManager(request);
+    const name = String(request.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 60) || 'Máy quầy';
+    const existing = await firestore.collection('attendance_kiosks')
+      .where('organizationId', '==', manager.organizationId)
+      .get();
+    const activeCount = existing.docs.filter(item => item.data().status === 'active').length;
+    if (activeCount >= MAX_ACTIVE_KIOSKS) {
+      throw new ApiError(409, 'kiosk-limit', `Mỗi cửa hàng tối đa ${MAX_ACTIVE_KIOSKS} máy quầy. Hãy thu hồi máy không dùng.`);
     }
-    const ttlSeconds = Math.min(60, Math.max(30, Number(settingsSnap.data().qrTtlSeconds) || 45));
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
-    const token = crypto.randomBytes(24).toString('base64url');
-    await firestore.collection('attendance_qr').doc(manager.organizationId).set({
+    const kioskId = crypto.randomBytes(9).toString('base64url');
+    const secret = crypto.randomBytes(24).toString('base64url');
+    await firestore.collection('attendance_kiosks').doc(kioskId).set({
       organizationId: manager.organizationId,
-      token,
-      issuedBy: manager.uid,
-      issuedAt: Timestamp.fromDate(now),
-      expiresAt: Timestamp.fromDate(expiresAt),
+      name,
+      status: 'active',
+      tokenHash: crypto.createHash('sha256').update(secret).digest('hex'),
+      createdBy: manager.uid,
+      createdAt: FieldValue.serverTimestamp(),
+      lastSeenAt: null,
     });
-    return {
-      qrPayload: JSON.stringify({ version: 1, organizationId: manager.organizationId, token }),
-      expiresAt: expiresAt.getTime(),
-      ttlSeconds,
-    };
+    // The secret is returned once and never stored in plain text.
+    return { kioskId, name, credential: `${kioskId}.${secret}` };
+  }));
+
+  router.post('/kiosks/:kioskId/revoke', route(async request => {
+    const manager = await requireManager(request);
+    const reference = firestore.collection('attendance_kiosks').doc(String(request.params.kioskId));
+    const snapshot = await reference.get();
+    if (!snapshot.exists || snapshot.data().organizationId !== manager.organizationId) {
+      throw new ApiError(404, 'kiosk-not-found', 'Không tìm thấy máy quầy.');
+    }
+    await reference.update({ status: 'revoked', revokedBy: manager.uid, revokedAt: FieldValue.serverTimestamp() });
+    return { kioskId: snapshot.id, status: 'revoked' };
+  }));
+
+  router.post('/kiosk/qr', route(async request => {
+    const kiosk = await requireKiosk(request);
+    const settings = await loadAttendanceSettings(kiosk.organizationId);
+    if (!Number.isFinite(Number(settings.latitude)) || !Number.isFinite(Number(settings.longitude))) {
+      throw new ApiError(409, 'settings-required', 'Cửa hàng chưa lưu vị trí chấm công.');
+    }
+    const [qr, organizationSnap] = await Promise.all([
+      issueQr({ organizationId: kiosk.organizationId, source: kiosk.id, issuedBy: `kiosk:${kiosk.id}`, settings }),
+      firestore.collection('organizations').doc(kiosk.organizationId).get(),
+      firestore.collection('attendance_kiosks').doc(kiosk.id).update({ lastSeenAt: FieldValue.serverTimestamp() }),
+    ]);
+    return { ...qr, kioskName: kiosk.name, shopName: organizationSnap.data()?.name || '' };
   }));
 
   const attendanceAction = action => route(async request => {

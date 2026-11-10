@@ -656,7 +656,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
       </div>
       )}
 
-      {!demoMode && <AttendanceSecurityPanel organizationId={organizationId} db={db} showToast={showToast} />}
+      {!demoMode && <AttendanceSecurityPanel organizationId={organizationId} db={db} showToast={showToast} showConfirm={showConfirm} />}
 
       {/* ─── DAY DETAIL PANEL ─── */}
       {employeeName.trim() && selectedDate && (

@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import { Timestamp } from 'firebase-admin/firestore';
 import { createApp } from '../src/app.js';
 import { PLANS } from '../src/billingLogic.js';
+import { createFirestore } from './support/fakeFirestore.js';
 
 const BILLING = {
   bankName: 'MB Bank',
@@ -11,38 +12,6 @@ const BILLING = {
   accountNumber: '0123456789',
   accountName: 'CONG TY WEAHR',
   webhookApiKey: 'test-webhook-key',
-};
-
-// Minimal in-memory Firestore: enough for get/set/update and transactions.
-const createFirestore = (seed = {}) => {
-  const store = new Map(Object.entries(seed));
-  const ref = (collection, id) => ({
-    path: `${collection}/${id}`,
-    get: async () => {
-      const data = store.get(`${collection}/${id}`);
-      return { exists: data !== undefined, id, data: () => (data === undefined ? undefined : { ...data }) };
-    },
-    set: async data => { store.set(`${collection}/${id}`, { ...data }); },
-    update: async data => {
-      const current = store.get(`${collection}/${id}`);
-      if (current === undefined) throw new Error(`missing ${collection}/${id}`);
-      store.set(`${collection}/${id}`, { ...current, ...data });
-    },
-  });
-  return {
-    store,
-    collection: name => ({ doc: id => ref(name, id) }),
-    runTransaction: async callback => {
-      const writes = [];
-      const result = await callback({
-        get: reference => reference.get(),
-        set: (reference, data) => writes.push(() => reference.set(data)),
-        update: (reference, data) => writes.push(() => reference.update(data)),
-      });
-      for (const write of writes) await write();
-      return result;
-    },
-  };
 };
 
 const owner = { role: 'manager', status: 'active', organizationId: 'org-a', isOrganizationOwner: true };
