@@ -59,9 +59,9 @@ export default function EmployeeTab({
   );
 
   const STATUS_OPTIONS = useMemo(() => [
-    { value: 'active',    label: t('employee_extra.status_active'),    color: '#10b981' },
-    { value: 'suspended', label: t('employee_extra.status_suspended'), color: '#f59e0b' },
-    { value: 'resigned',  label: t('employee_extra.status_resigned'),  color: '#ef4444' },
+    { value: 'active',    label: t('employee_extra.status_active'),    color: '#2e9e6a' },
+    { value: 'suspended', label: t('employee_extra.status_suspended'), color: '#e0a11b' },
+    { value: 'resigned',  label: t('employee_extra.status_resigned'),  color: '#d64533' },
   ], [t]);
 
   const [form, setForm] = useState(emptyForm);
@@ -305,7 +305,7 @@ export default function EmployeeTab({
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
               <div style={{
                 width: '60px', height: '60px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--primary), #3730a3)',
+                background: 'linear-gradient(135deg, var(--primary), #552d17)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'white', fontSize: '1.5rem', fontWeight: '800', flexShrink: 0
               }}>
@@ -320,7 +320,7 @@ export default function EmployeeTab({
                   <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '3px 10px', borderRadius: '12px', background: `${si.color}22`, color: si.color }}>
                     {si.label}
                   </span>
-                  {detailData.employeeCode && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '3px 10px', borderRadius: '12px', background: '#f1f5f9' }}>{detailData.employeeCode}</span>}
+                  {detailData.employeeCode && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '3px 10px', borderRadius: '12px', background: '#f5eee6' }}>{detailData.employeeCode}</span>}
                 </div>
               </div>
             </div>
@@ -353,7 +353,7 @@ export default function EmployeeTab({
                 style={{ flex: 1, padding: '8px 14px', borderRadius: '8px', border: '1px solid', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600',
                   borderColor: detailData.employmentStatus === 'active' ? '#fcd34d' : '#86efac',
                   background: detailData.employmentStatus === 'active' ? '#fffbeb' : '#f0fdf4',
-                  color: detailData.employmentStatus === 'active' ? '#d97706' : '#15803d' }}
+                  color: detailData.employmentStatus === 'active' ? '#b9790f' : '#1f6b44' }}
               >
                 {detailData.employmentStatus === 'active' ? `⏸ ${t('employee_extra.suspend_btn')}` : `▶ ${t('employee_extra.activate_btn')}`}
               </button>
@@ -603,7 +603,7 @@ export default function EmployeeTab({
             <button className="btn-primary" onClick={handleSave} disabled={isSaving} style={{ flex: 1 }}>
               {isSaving ? t('employee_extra.saving') : isEdit ? t('employee_extra.update_btn') : t('employee_extra.save_btn')}
             </button>
-            <button style={{ padding: '12px 20px', background: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }} onClick={() => setView('list')}>
+            <button style={{ padding: '12px 20px', background: '#ece2d6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }} onClick={() => setView('list')}>
               {t('common.cancel')}
             </button>
           </div>
@@ -655,7 +655,7 @@ export default function EmployeeTab({
       {/* Employee list */}
       {filtered.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px', margin: 0 }}>
-          <i className="fas fa-users" style={{ fontSize: '2.5rem', color: '#cbd5e1', marginBottom: '12px', display: 'block' }}></i>
+          <i className="fas fa-users" style={{ fontSize: '2.5rem', color: '#dccdbe', marginBottom: '12px', display: 'block' }}></i>
           <p style={{ color: 'var(--text-muted)' }}>
             {Object.keys(savedEmployees).length === 0 ? t('employee_extra.no_employees') : t('employee_extra.no_match')}
           </p>

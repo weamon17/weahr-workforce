@@ -413,7 +413,7 @@ export default function WeeklySchedulerPanel({ db, organizationId, employeeUsers
   const unsubmittedCount = Math.max(0, employeeUsers.length - submittedCount);
 
   return (
-    <section className="card" style={{ border: '2px solid #e0e7ff' }}>
+    <section className="card" style={{ border: '2px solid #f6ece2' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0 }}>{t('scheduler.title')}</h2>
@@ -530,7 +530,7 @@ export default function WeeklySchedulerPanel({ db, organizationId, employeeUsers
         <div style={{ marginTop: '20px' }}>
           <h3>{t('scheduler.swaps_title')}</h3>
           {swapRequests.filter(item => ['open', 'claimed'].includes(item.status)).map(item => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', padding: '12px 0', borderTop: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', padding: '12px 0', borderTop: '1px solid #ece2d6', flexWrap: 'wrap' }}>
               <span>{t('scheduler.swap_needs_cover', { name: item.fromEmployeeName, date: item.shift.date, start: item.shift.startTime, end: item.shift.endTime })}<br /><small>{item.claimedByName ? t('scheduler.swap_proposed', { name: item.claimedByName }) : t('scheduler.swap_waiting')}</small></span>
               {item.claimedByName && <div style={{ display: 'flex', gap: '8px' }}><button className="btn-secondary" onClick={() => resolveSwap(item, false)}>{t('scheduler.reject')}</button><button className="btn-primary" onClick={() => resolveSwap(item, true)}>{t('scheduler.approve_swap')}</button></div>}
             </div>

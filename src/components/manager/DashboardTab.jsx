@@ -1,348 +1,274 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { calculatePayroll } from '../../utils/payroll';
 import { localDateString, localMonthString } from '../../utils/time';
 
-function StatCard({ icon, label, value, sub, color }) {
+const COLORS = { onTime: '#2e9e6a', late: '#e0a11b', off: '#d64533', grid: '#f5eee6', axis: '#a39486' };
+const MISSING_CHECKOUT_LOOKBACK_DAYS = 31;
+
+const personKey = item => item.employeeId || item.employeeName;
+const initialOf = name => (name || '?').trim().split(/\s+/).pop().charAt(0).toUpperCase();
+const nowTime = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+};
+const greetingKey = () => {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'home.greeting_morning';
+  if (hour < 18) return 'home.greeting_afternoon';
+  return 'home.greeting_evening';
+};
+
+function PulseTile({ tone, icon, label, value, hint, onClick }) {
   return (
-    <div className="stat-card" style={{
-      background: 'white', borderRadius: '16px', padding: '20px 22px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.06)', borderLeft: `4px solid ${color}`,
-      display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative', overflow: 'hidden',
-    }}>
-      <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', background: color, opacity: 0.06, borderRadius: '0 0 0 80px' }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-        <i className={icon} style={{ color, fontSize: '0.85rem', flexShrink: 0 }} />
-        <span className="stat-label" style={{ fontSize: '0.72rem', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.2 }}>{label}</span>
-      </div>
-      <span className="stat-value" style={{ fontSize: '2rem', fontWeight: '800', color, lineHeight: 1 }}>{value}</span>
-      <span style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '2px' }}>{sub}</span>
+    <button type="button" className={`pulse-tile tone-${tone} ${value === 0 ? 'is-zero' : ''}`} onClick={onClick}>
+      <span className="pulse-icon"><i className={icon} aria-hidden="true"></i></span>
+      <span className="pulse-label">{label}</span>
+      <span className="pulse-value">{value}</span>
+      <span className="pulse-hint">{hint}</span>
+    </button>
+  );
+}
+
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '10px 14px', boxShadow: 'var(--shadow-md)', fontSize: '0.88rem' }}>
+      <p style={{ margin: '0 0 6px', fontWeight: 700 }}>{label}</p>
+      {payload.map(entry => (
+        <p key={entry.dataKey} style={{ margin: '2px 0', color: entry.color, fontWeight: 600 }}>{entry.name}: {entry.value}</p>
+      ))}
     </div>
   );
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', fontSize: '0.83rem' }}>
-      <p style={{ margin: '0 0 6px', fontWeight: '700', color: '#0f172a' }}>{label}</p>
-      {payload.map(p => (
-        <p key={p.dataKey} style={{ margin: '2px 0', color: p.color, fontWeight: '600' }}>
-          {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  );
-};
-
-export default function DashboardTab({ records, savedEmployees, schedules, appliedPenalties, appliedBonuses, formatMoney }) {
+export default function DashboardTab({
+  records, savedEmployees, schedules, appliedPenalties, appliedBonuses, formatMoney, shopName, onNavigate,
+}) {
   const { t, i18n } = useTranslation();
   const today = localDateString();
   const currentMonth = localMonthString();
-  const [chartPeriod, setChartPeriod] = useState(14);
+  const [chartDays, setChartDays] = useState(7);
+  const go = tab => onNavigate?.(tab);
 
-  const stats = useMemo(() => {
-    const totalEmployees = Object.keys(savedEmployees).length;
-    const todayRecords = records.filter(r => r.date === today);
-    const workedToday = new Set(todayRecords.filter(r => r.status === 'work').map(r => r.employeeName)).size;
-    const checkedIn = todayRecords.filter(r => r.checkIn && !r.checkOut && r.status === 'work').length;
-    const lateToday = todayRecords.filter(r => r.lateHours > 0).length;
-    const pendingSchedules = (schedules || []).filter(s => s.status === 'pending').length;
+  const overview = useMemo(() => {
+    const todayRecords = records.filter(record => record.date === today);
+    const checkedIn = todayRecords.filter(record => record.checkIn && record.status !== 'off');
+    const working = checkedIn.filter(record => !record.checkOut);
+    const late = todayRecords.filter(record => Number(record.lateHours) > 0);
+    const present = new Set(todayRecords.map(personKey));
 
-    const estimatedPayroll = Object.entries(savedEmployees).reduce((sum, [name, emp]) => {
-      const result = calculatePayroll({
-        employee: emp,
-        employeeName: name,
-        employeeId: emp.employeeId || emp.userId,
-        month: currentMonth,
-        records,
-        penalties: appliedPenalties,
-        bonuses: appliedBonuses,
-      });
-      return sum + (result?.finalSalary || 0);
-    }, 0);
+    const currentTime = nowTime();
+    const notArrived = [];
+    const seen = new Set();
+    for (const schedule of schedules || []) {
+      const key = personKey(schedule);
+      if (schedule.workDate !== today || schedule.status !== 'approved' || schedule.scheduleType === 'off_request') continue;
+      if (present.has(key) || seen.has(key) || (schedule.startTime || '00:00') > currentTime) continue;
+      seen.add(key);
+      notArrived.push(schedule);
+    }
 
-    return { totalEmployees, workedToday, checkedIn, lateToday, pendingSchedules, estimatedPayroll };
-  }, [records, savedEmployees, schedules, appliedPenalties, appliedBonuses, today, currentMonth]);
+    const lookback = new Date();
+    lookback.setDate(lookback.getDate() - MISSING_CHECKOUT_LOOKBACK_DAYS);
+    const lookbackDate = localDateString(lookback);
+    const missingCheckout = records.filter(record => record.date < today && record.date >= lookbackDate
+      && (record.status === 'missing_checkout' || (record.checkIn && !record.checkOut && record.status !== 'off')));
 
-  // --- Chart data ---
-  const attendanceTrendData = useMemo(() => {
+    const pending = (schedules || []).filter(schedule => schedule.status === 'pending').length;
+
+    const people = [...todayRecords].sort((left, right) => (left.checkIn || '99').localeCompare(right.checkIn || '99'));
+
+    return {
+      people,
+      notArrived,
+      missingCheckout,
+      pending,
+      checkedInCount: new Set(checkedIn.map(personKey)).size,
+      workingCount: new Set(working.map(personKey)).size,
+      lateCount: new Set(late.map(personKey)).size,
+    };
+  }, [records, schedules, today]);
+
+  const payroll = useMemo(() => {
+    const entries = Object.entries(savedEmployees);
+    const total = entries.reduce((sum, [name, employee]) => sum + (calculatePayroll({
+      employee,
+      employeeName: name,
+      employeeId: employee.employeeId || employee.userId,
+      month: currentMonth,
+      records,
+      penalties: appliedPenalties,
+      bonuses: appliedBonuses,
+    })?.finalSalary || 0), 0);
+    return { total, count: entries.length };
+  }, [records, savedEmployees, appliedPenalties, appliedBonuses, currentMonth]);
+
+  const chartData = useMemo(() => {
     const days = [];
-    for (let i = chartPeriod - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = localDateString(d);
-      const dayRecords = records.filter(r => r.date === dateStr);
-      const label = `${d.getDate()}/${d.getMonth() + 1}`;
+    for (let offset = chartDays - 1; offset >= 0; offset -= 1) {
+      const date = new Date();
+      date.setDate(date.getDate() - offset);
+      const dateString = localDateString(date);
+      const dayRecords = records.filter(record => record.date === dateString);
       days.push({
-        date: label,
-        working: dayRecords.filter(r => r.status === 'work' && !r.lateHours).length,
-        late: dayRecords.filter(r => r.lateHours > 0).length,
-        off: dayRecords.filter(r => r.status === 'off').length,
-        ot: dayRecords.filter(r => r.otHours > 0).length,
+        date: `${date.getDate()}/${date.getMonth() + 1}`,
+        onTime: dayRecords.filter(record => record.status !== 'off' && !(Number(record.lateHours) > 0)).length,
+        late: dayRecords.filter(record => Number(record.lateHours) > 0).length,
+        off: dayRecords.filter(record => record.status === 'off').length,
       });
     }
     return days;
-  }, [records, chartPeriod]);
+  }, [records, chartDays]);
 
-  const employeeTypeData = useMemo(() => {
-    const ft = Object.values(savedEmployees).filter(e => e.type === 'fulltime').length;
-    const pt = Object.values(savedEmployees).filter(e => e.type === 'parttime').length;
-    return [
-      { name: 'Full-time', value: ft, color: '#4f46e5' },
-      { name: 'Part-time', value: pt, color: '#f59e0b' },
-    ];
-  }, [savedEmployees]);
+  const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
+  const todayLabel = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const monthLabel = new Date().toLocaleDateString(locale, { month: 'numeric', year: 'numeric' });
 
-  const employeePayrollData = useMemo(() => {
-    return Object.entries(savedEmployees).map(([name, emp]) => {
-      const result = calculatePayroll({
-        employee: emp,
-        employeeName: name,
-        employeeId: emp.employeeId || emp.userId,
-        month: currentMonth,
-        records,
-        penalties: appliedPenalties,
-        bonuses: appliedBonuses,
-      });
-      return { name: name.split(' ').pop(), fullName: name, pay: Math.round((result?.finalSalary || 0) / 1000) };
-    }).sort((a, b) => b.pay - a.pay).slice(0, 8);
-  }, [records, savedEmployees, appliedPenalties, appliedBonuses, currentMonth]);
+  const todos = [
+    overview.pending > 0 && {
+      key: 'pending', tone: 'primary', icon: 'fas fa-calendar-check',
+      text: t('home.todo_pending', { count: overview.pending }), action: t('home.todo_pending_action'), tab: 'schedule',
+    },
+    overview.notArrived.length > 0 && {
+      key: 'absent', tone: 'danger', icon: 'fas fa-user-slash',
+      text: t('home.todo_absent', { count: overview.notArrived.length }), action: t('home.todo_absent_action'), tab: 'schedule',
+    },
+    overview.missingCheckout.length > 0 && {
+      key: 'checkout', tone: 'warning', icon: 'fas fa-door-open',
+      text: t('home.todo_missing_out', { count: overview.missingCheckout.length }), action: t('home.todo_missing_out_action'), tab: 'timesheet',
+    },
+  ].filter(Boolean);
 
-  const todayRecords = records.filter(r => r.date === today);
-  const todayStatusData = useMemo(() => [
-    { name: t('dashboard.status_on_time'), value: todayRecords.filter(r => r.status === 'work' && !r.lateHours).length, color: '#10b981' },
-    { name: t('dashboard.status_late'), value: todayRecords.filter(r => r.lateHours > 0).length, color: '#f59e0b' },
-    { name: t('dashboard.status_off'), value: todayRecords.filter(r => r.status === 'off').length, color: '#ef4444' },
-    { name: t('dashboard.status_ot'), value: todayRecords.filter(r => r.otHours > 0 && !r.lateHours).length, color: '#8b5cf6' },
-  ].filter(d => d.value > 0), [todayRecords, t]);
-
-  const sectionHead = (icon, title, sub) => (
-    <div style={{ marginBottom: '16px' }}>
-      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <i className={icon} style={{ color: 'var(--primary)' }} /> {title}
-      </h3>
-      {sub && <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.82rem' }}>{sub}</p>}
-    </div>
-  );
-
-  const dateLocale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
-  const monthYear = `${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
+  const statusOf = record => {
+    if (record.status === 'off') return { tone: 'danger', label: t('home.status_off') };
+    if (record.status === 'missing_checkout') return { tone: 'danger', label: t('home.status_missing_out') };
+    if (record.checkIn && !record.checkOut) return { tone: 'working', label: t('home.status_working') };
+    return { tone: 'done', label: t('home.status_done') };
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '32px' }}>
+    <div className="home">
+      <section className="home-hero">
+        <span className="home-hero-date">
+          <i className="fas fa-mug-hot" aria-hidden="true"></i> {t(greetingKey())}
+        </span>
+        <h2>{shopName || t('brand.shop_fallback')}</h2>
+        <p>{todayLabel} · {t('home.subtitle')}</p>
+      </section>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.7rem', fontWeight: '800', textAlign: 'left', letterSpacing: '-0.5px' }}>
-            Dashboard
-          </h2>
-          <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
-            <i className="fas fa-calendar-day" style={{ marginRight: '6px' }} />
-            {new Date().toLocaleDateString(dateLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+      <section aria-labelledby="home-pulse">
+        <h3 id="home-pulse" className="home-section-title"><i className="fas fa-store" aria-hidden="true"></i> {t('home.pulse_title')}</h3>
+        <div className="pulse-grid">
+          <PulseTile tone="working" icon="fas fa-user-check" label={t('home.pulse_working')} value={overview.workingCount} hint={t('home.pulse_working_hint')} onClick={() => go('timesheet')} />
+          <PulseTile tone="done" icon="fas fa-fingerprint" label={t('home.pulse_done')} value={overview.checkedInCount} hint={t('home.pulse_done_hint')} onClick={() => go('timesheet')} />
+          <PulseTile tone="late" icon="fas fa-clock" label={t('home.pulse_late')} value={overview.lateCount} hint={t('home.pulse_late_hint')} onClick={() => go('timesheet')} />
+          <PulseTile tone="missing" icon="fas fa-user-slash" label={t('home.pulse_missing')} value={overview.notArrived.length} hint={t('home.pulse_missing_hint')} onClick={() => go('schedule')} />
         </div>
-        <div style={{ background: 'white', borderRadius: '10px', padding: '6px 12px', border: '1px solid #e2e8f0', fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>
-          <i className="fas fa-sync-alt" style={{ marginRight: '6px', color: '#10b981' }} />
-          Live
-        </div>
-      </div>
+      </section>
 
-      {/* Stats Grid */}
-      <div className="stat-grid">
-        <StatCard icon="fas fa-users" label={t('dashboard.stat_total_employees')} value={stats.totalEmployees} sub={t('dashboard.stat_in_system')} color="#4f46e5" />
-        <StatCard icon="fas fa-user-check" label={t('dashboard.stat_working_today')} value={stats.workedToday} sub={t('dashboard.stat_has_timesheet')} color="#10b981" />
-        <StatCard icon="fas fa-business-time" label={t('dashboard.stat_currently_working')} value={stats.checkedIn} sub={t('dashboard.stat_not_checked_out')} color="#f59e0b" />
-        <StatCard icon="fas fa-user-clock" label={t('dashboard.stat_late_today')} value={stats.lateToday} sub={t('dashboard.stat_late_count')} color="#ef4444" />
-        <StatCard icon="fas fa-bell" label={t('dashboard.stat_pending_shifts')} value={stats.pendingSchedules} sub={t('dashboard.stat_pending_requests')} color="#8b5cf6" />
-        <StatCard icon="fas fa-coins" label={t('dashboard.stat_estimated_payroll')} value={formatMoney(stats.estimatedPayroll)} sub={monthYear} color="#0ea5e9" />
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="charts-row">
-
-        {/* Attendance Trend */}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-            {sectionHead('fas fa-chart-bar', t('dashboard.trend_title'), null)}
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {[7, 14, 30].map(d => (
-                <button key={d} onClick={() => setChartPeriod(d)} style={{
-                  padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700',
-                  background: chartPeriod === d ? 'var(--primary)' : '#f1f5f9',
-                  color: chartPeriod === d ? 'white' : '#64748b', border: 'none', cursor: 'pointer',
-                }}>
-                  {d}{t('dashboard.day_suffix')}
-                </button>
-              ))}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={attendanceTrendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={10}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }} />
-              <Bar dataKey="working" name={t('dashboard.bar_working')} fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="late" name={t('dashboard.bar_late')} fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="off" name={t('dashboard.bar_off')} fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="ot" name={t('dashboard.bar_ot')} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Today breakdown donut + employee type */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Today status */}
-          <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', flex: 1 }}>
-            {sectionHead('fas fa-chart-pie', t('dashboard.today_title'), t('dashboard.today_subtitle'))}
-            {todayStatusData.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0', fontSize: '0.85rem' }}>
-                <i className="fas fa-inbox" style={{ fontSize: '2rem', marginBottom: '8px', display: 'block' }} />
-                {t('dashboard.no_data_label')}
-              </div>
+      <div className="home-grid">
+        <div className="home-col">
+          <section className="home-card" aria-labelledby="home-todo">
+            <h3 id="home-todo" className="home-section-title"><i className="fas fa-clipboard-list" aria-hidden="true"></i> {t('home.todo_title')}</h3>
+            {todos.length === 0 ? (
+              <div className="todo-empty"><i className="fas fa-check-circle" aria-hidden="true"></i> {t('home.todo_empty')}</div>
             ) : (
-              <ResponsiveContainer width="100%" height={140}>
-                <PieChart>
-                  <Pie data={todayStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} innerRadius={30} paddingAngle={3}>
-                    {todayStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip formatter={(v, n) => [v + ' ' + t('dashboard.unit_people'), n]} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
-              </ResponsiveContainer>
+              <ul className="todo-list">
+                {todos.map(todo => (
+                  <li key={todo.key} className={`todo-item tone-${todo.tone}`}>
+                    <span className="todo-icon"><i className={todo.icon} aria-hidden="true"></i></span>
+                    <span className="todo-text">{todo.text}</span>
+                    <button type="button" className="btn-primary" onClick={() => go(todo.tab)}>{todo.action}</button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
+          </section>
 
-          {/* FT vs PT */}
-          <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', flex: 1 }}>
-            {sectionHead('fas fa-user-tie', t('dashboard.contract_type'), null)}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <ResponsiveContainer width={100} height={100}>
-                <PieChart>
-                  <Pie data={employeeTypeData} dataKey="value" cx="50%" cy="50%" outerRadius={44} innerRadius={24} paddingAngle={4}>
-                    {employeeTypeData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {employeeTypeData.map(d => (
-                  <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: d.color, display: 'block' }} />
-                      <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>{d.name}</span>
-                    </div>
-                    <span style={{ fontSize: '1.1rem', fontWeight: '800', color: d.color }}>{d.value}</span>
-                  </div>
+          <section className="home-card" aria-labelledby="home-people">
+            <h3 id="home-people" className="home-section-title"><i className="fas fa-users" aria-hidden="true"></i> {t('home.people_title')}</h3>
+            {overview.people.length === 0 && overview.notArrived.length === 0 ? (
+              <div className="home-empty"><i className="fas fa-mug-hot" aria-hidden="true"></i>{t('home.people_empty')}</div>
+            ) : (
+              <ul className="people-list">
+                {overview.people.map(record => {
+                  const status = statusOf(record);
+                  const lateMinutes = Math.round((Number(record.lateHours) || 0) * 60);
+                  const position = savedEmployees[record.employeeName]?.position;
+                  const times = [
+                    record.checkIn && t('home.time_in', { time: record.checkIn }),
+                    record.checkOut && t('home.time_out', { time: record.checkOut }),
+                  ].filter(Boolean).join(' · ');
+                  return (
+                    <li key={record.id} className="person-row">
+                      <span className="person-avatar" aria-hidden="true">{initialOf(record.employeeName)}</span>
+                      <span className="person-main">
+                        <strong>{record.employeeName}</strong>
+                        <span>{[position, times].filter(Boolean).join(' · ')}</span>
+                      </span>
+                      {lateMinutes > 0 && <span className="status-chip tone-late">{t('home.status_late', { minutes: lateMinutes })}</span>}
+                      <span className={`status-chip tone-${status.tone}`}>{status.label}</span>
+                    </li>
+                  );
+                })}
+                {overview.notArrived.map(schedule => (
+                  <li key={`absent-${schedule.id}`} className="person-row">
+                    <span className="person-avatar" aria-hidden="true">{initialOf(schedule.employeeName)}</span>
+                    <span className="person-main">
+                      <strong>{schedule.employeeName}</strong>
+                      <span>{t('home.shift_at', { start: schedule.startTime, end: schedule.endTime })}</span>
+                    </span>
+                    <span className="status-chip tone-danger">{t('home.status_not_arrived')}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <div className="home-col">
+          <section className="pay-card" aria-labelledby="home-pay">
+            <small id="home-pay">{t('home.pay_title', { month: monthLabel })}</small>
+            <strong>{formatMoney(payroll.total)}</strong>
+            <p>{t('home.pay_hint', { count: payroll.count })}</p>
+            <button type="button" onClick={() => go('payroll')}>
+              {t('home.pay_action')} <i className="fas fa-arrow-right" aria-hidden="true"></i>
+            </button>
+          </section>
+
+          <section className="home-card" aria-labelledby="home-week">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <h3 id="home-week" className="home-section-title" style={{ margin: 0 }}><i className="fas fa-chart-column" aria-hidden="true"></i> {t('home.week_title')}</h3>
+              <div className="segmented" role="group">
+                {[7, 30].map(days => (
+                  <button key={days} type="button" className={chartDays === days ? 'active' : ''} aria-pressed={chartDays === days} onClick={() => setChartDays(days)}>
+                    {t('home.days', { count: days })}
+                  </button>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Payroll by employee chart */}
-      {employeePayrollData.length > 0 && (
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          {sectionHead('fas fa-money-bill-wave', t('dashboard.payroll_by_emp'), `${monthYear} (${t('dashboard.payroll_thousands')})`)}
-          <ResponsiveContainer width="100%" height={Math.max(180, employeePayrollData.length * 42)}>
-            <BarChart layout="vertical" data={employeePayrollData} margin={{ top: 0, right: 16, left: 8, bottom: 0 }} barSize={16}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} unit="k" />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#334155', fontWeight: 600 }} tickLine={false} axisLine={false} width={60} />
-              <Tooltip formatter={(v) => [new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US').format(v * 1000) + ' đ', t('dashboard.stat_estimated_payroll')]} labelFormatter={(l, payload) => payload?.[0]?.payload?.fullName || l} />
-              <Bar dataKey="pay" fill="#4f46e5" radius={[0, 6, 6, 0]}>
-                {employeePayrollData.map((_, i) => <Cell key={i} fill={`hsl(${240 - i * 18}, 65%, ${55 + i * 3}%)`} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Today's attendance table */}
-      <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        {sectionHead('fas fa-clock', t('dashboard.attendance_today'), today)}
-        {todayRecords.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
-            <i className="fas fa-calendar-times" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '10px' }} />
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>{t('dashboard.no_data_today')}</p>
-          </div>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('dashboard.col_employee')}</th>
-                  <th>{t('dashboard.col_type')}</th>
-                  <th>Check-in</th>
-                  <th>Check-out</th>
-                  <th>{t('dashboard.col_hours')}</th>
-                  <th>{t('dashboard.col_status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todayRecords.map(r => {
-                  const empType = (savedEmployees[r.employeeName]?.type || r.type);
-                  return (
-                    <tr key={r.id}>
-                      <td style={{ fontWeight: '600' }}>{r.employeeName}</td>
-                      <td>
-                        <span className={`badge ${empType === 'fulltime' ? 'badge-ft' : 'badge-pt'}`}>
-                          {empType === 'fulltime' ? 'FT' : 'PT'}
-                        </span>
-                      </td>
-                      <td>{r.checkIn || '—'}</td>
-                      <td>{r.checkOut || '—'}</td>
-                      <td>{r.status === 'off' ? '—' : `${(r.workHours || 0).toFixed(2)}h`}</td>
-                      <td>
-                        {r.status === 'off' && <span style={{ color: '#ef4444', fontWeight: '600' }}>{t('dashboard.status_tag_off')}</span>}
-                        {r.status === 'work' && r.lateHours > 0 && <span style={{ color: '#f59e0b', fontWeight: '600' }}>{t('dashboard.status_tag_late')} {r.lateHours.toFixed(2)}h</span>}
-                        {r.status === 'work' && (r.otHours || 0) > 0 && !r.lateHours && <span style={{ color: '#8b5cf6', fontWeight: '600' }}>OT +{r.otHours}h</span>}
-                        {r.status === 'work' && !r.lateHours && !(r.otHours > 0) && <span style={{ color: '#10b981', fontWeight: '600' }}>{t('dashboard.status_tag_on_time')}</span>}
-                        {r.status === 'missing_checkout' && <span style={{ color: '#64748b', fontWeight: '600' }}>{t('dashboard.status_tag_missing_co')}</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Not checked in today */}
-      <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        {sectionHead('fas fa-user-times', t('dashboard.no_data_section'), null)}
-        {(() => {
-          const workedNames = new Set(todayRecords.map(r => r.employeeName));
-          const notWorked = Object.entries(savedEmployees).filter(([n]) => !workedNames.has(n));
-          if (notWorked.length === 0) return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontWeight: '600' }}>
-              <i className="fas fa-check-circle" /> {t('dashboard.all_data_present')}
-            </div>
-          );
-          return (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {notWorked.map(([name, emp]) => (
-                <span key={name} style={{
-                  background: '#fee2e2', color: '#991b1b',
-                  padding: '6px 14px', borderRadius: '20px', fontSize: '0.84rem', fontWeight: '600',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                  {name}
-                  <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{emp.type === 'fulltime' ? 'FT' : 'PT'}</span>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }} barSize={chartDays > 7 ? 7 : 18}>
+                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 12, fill: COLORS.axis }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.axis }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(227, 154, 75, 0.08)' }} />
+                <Bar dataKey="onTime" stackId="day" name={t('home.legend_on_time')} fill={COLORS.onTime} />
+                <Bar dataKey="late" stackId="day" name={t('home.legend_late')} fill={COLORS.late} />
+                <Bar dataKey="off" stackId="day" name={t('home.legend_off')} fill={COLORS.off} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '8px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+              {[['onTime', 'home.legend_on_time'], ['late', 'home.legend_late'], ['off', 'home.legend_off']].map(([key, label]) => (
+                <span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: COLORS[key] }} /> {t(label)}
                 </span>
               ))}
             </div>
-          );
-        })()}
+          </section>
+        </div>
       </div>
     </div>
   );

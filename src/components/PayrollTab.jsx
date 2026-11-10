@@ -14,10 +14,10 @@ export default function PayrollTab({
   const { t } = useTranslation();
 
   const PAYROLL_STATUS_MAP = useMemo(() => ({
-    draft:     { label: t('payroll.status_draft'),     color: '#64748b', bg: '#f1f5f9', icon: 'fas fa-pencil-alt' },
+    draft:     { label: t('payroll.status_draft'),     color: '#75665b', bg: '#f5eee6', icon: 'fas fa-pencil-alt' },
     finalized: { label: t('payroll.status_finalized'), color: '#1d4ed8', bg: '#dbeafe', icon: 'fas fa-lock' },
     revised:   { label: t('payroll.status_revised'),   color: '#92400e', bg: '#fef3c7', icon: 'fas fa-redo' },
-    paid:      { label: t('payroll.status_paid'),      color: '#166534', bg: '#dcfce7', icon: 'fas fa-check-circle' },
+    paid:      { label: t('payroll.status_paid'),      color: '#1f6b44', bg: '#dcfce7', icon: 'fas fa-check-circle' },
   }), [t]);
 
   const [reportMonth,    setReportMonth]    = useState(localMonthString);
@@ -305,7 +305,7 @@ export default function PayrollTab({
     const data = [
       [`${t('payroll.summary_title')} ${mm}/${yy}`],
       [],
-      [t('payroll.col_employee'), t('payroll.col_type'), t('payroll.col_work_days'), t('payroll.col_total_hours'), 'OT (h)', t('payroll.col_bonus'), t('payroll.col_penalty'), t('payroll.col_estimated')],
+      [t('payroll.col_employee'), t('payroll.col_type'), t('payroll.col_work_days'), t('payroll.col_total_hours'), t('payroll.col_ot'), t('payroll.col_bonus'), t('payroll.col_penalty'), t('payroll.col_estimated')],
       ...monthlySummaryData.map(r => [
         r.name,
         r.type === 'fulltime' ? 'Full-time' : 'Part-time',
@@ -343,12 +343,12 @@ export default function PayrollTab({
             <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>{t('payroll.summary_note')}</p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ background: 'linear-gradient(135deg, var(--primary), #3730a3)', color: 'white', padding: '8px 16px', borderRadius: '10px', fontWeight: '800', fontSize: '0.9rem' }}>
+            <span style={{ background: 'linear-gradient(135deg, var(--primary), #552d17)', color: 'white', padding: '8px 16px', borderRadius: '10px', fontWeight: '800', fontSize: '0.9rem' }}>
               {t('payroll.total_row')} {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalEstimated)}
             </span>
             <button onClick={exportMonthlySummaryToExcel} style={{
-              padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #16a34a',
-              color: '#16a34a', background: '#f0fdf4', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700',
+              padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #23854f',
+              color: '#23854f', background: '#f0fdf4', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700',
               display: 'flex', alignItems: 'center', gap: '5px',
             }}>
               <i className="fas fa-file-excel"></i> {t('payroll.export_excel')}
@@ -381,18 +381,18 @@ export default function PayrollTab({
                   <td style={{ fontWeight: '600' }}>{row.name}</td>
                   <td>
                     <span className={`badge ${row.type === 'fulltime' ? 'badge-ft' : 'badge-pt'}`}>
-                      {row.type === 'fulltime' ? 'FT' : 'PT'}
+                      {row.type === 'fulltime' ? 'Full-time' : 'Part-time'}
                     </span>
                   </td>
-                  <td>{row.workDays > 0 ? `${row.workDays}` : <span style={{ color: '#94a3b8' }}>—</span>}</td>
-                  <td>{row.totalWorkHours > 0 ? `${row.totalWorkHours.toFixed(1)}h` : <span style={{ color: '#94a3b8' }}>—</span>}</td>
+                  <td>{row.workDays > 0 ? `${row.workDays}` : <span style={{ color: '#a39486' }}>—</span>}</td>
+                  <td>{row.totalWorkHours > 0 ? `${row.totalWorkHours.toFixed(1)}h` : <span style={{ color: '#a39486' }}>—</span>}</td>
                   <td style={{ color: row.totalOtHours > 0 ? '#f97316' : 'inherit', fontWeight: row.totalOtHours > 0 ? '700' : '400' }}>
                     {row.totalOtHours > 0 ? `${row.totalOtHours.toFixed(1)}h` : '—'}
                   </td>
-                  <td style={{ color: '#16a34a', fontWeight: row.bonuses > 0 ? '700' : '400' }}>
+                  <td style={{ color: '#23854f', fontWeight: row.bonuses > 0 ? '700' : '400' }}>
                     {row.bonuses > 0 ? `+${new Intl.NumberFormat('vi-VN').format(row.bonuses)}` : '—'}
                   </td>
-                  <td style={{ color: '#dc2626', fontWeight: row.penalties > 0 ? '700' : '400' }}>
+                  <td style={{ color: '#c0362a', fontWeight: row.penalties > 0 ? '700' : '400' }}>
                     {row.penalties > 0 ? `-${new Intl.NumberFormat('vi-VN').format(row.penalties)}` : '—'}
                   </td>
                   <td style={{ fontWeight: '800', color: 'var(--primary)' }}>
@@ -417,7 +417,7 @@ export default function PayrollTab({
   const renderPayslip = () => {
     if (!reportEmployee) return (
       <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-        <i className="fas fa-file-invoice-dollar" style={{ fontSize: '3rem', marginBottom: '12px', display: 'block', color: '#cbd5e1' }}></i>
+        <i className="fas fa-file-invoice-dollar" style={{ fontSize: '3rem', marginBottom: '12px', display: 'block', color: '#dccdbe' }}></i>
         {t('payroll.select_hint')}
       </div>
     );
@@ -544,8 +544,8 @@ export default function PayrollTab({
                   <i className="fas fa-print"></i> {t('payroll.print_btn')}
                 </button>
                 <button onClick={exportPayslipToExcel} style={{
-                  padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #16a34a',
-                  color: '#16a34a', background: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600',
+                  padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #23854f',
+                  color: '#23854f', background: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600',
                   display: 'flex', alignItems: 'center', gap: '5px',
                 }}>
                   <i className="fas fa-file-csv"></i> CSV
@@ -570,7 +570,7 @@ export default function PayrollTab({
                       onClick={() => showConfirm(t('payroll.confirm_mark_paid'), handleMarkPaid)}
                       style={{
                         padding: '8px 16px', borderRadius: '8px', border: 'none',
-                        background: '#16a34a', color: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
+                        background: '#23854f', color: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem',
                       }}
                     >
                       <i className="fas fa-check-circle"></i> {t('payroll.mark_paid_btn')}
@@ -578,8 +578,8 @@ export default function PayrollTab({
                     <button
                       onClick={() => { setReviseReason(''); setShowReviseModal(true); }}
                       style={{
-                        padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #d97706',
-                        color: '#d97706', background: 'white', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                        padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #b9790f',
+                        color: '#b9790f', background: 'white', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
                       }}
                     >
                       <i className="fas fa-redo"></i> {t('payroll.revise_btn')}
@@ -588,7 +588,7 @@ export default function PayrollTab({
                 )}
 
                 {status === 'paid' && (
-                  <span style={{ color: '#166534', fontSize: '0.85rem', fontWeight: '600' }}>
+                  <span style={{ color: '#1f6b44', fontSize: '0.85rem', fontWeight: '600' }}>
                     <i className="fas fa-check-circle"></i> {t('payroll.completed_label')}
                   </span>
                 )}
@@ -597,7 +597,7 @@ export default function PayrollTab({
 
             {/* Revision reason note */}
             {currentPayrollDoc?.reviseReason && (
-              <div style={{ background: '#fef3c7', borderLeft: '4px solid #d97706', padding: '10px 14px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
+              <div style={{ background: '#fef3c7', borderLeft: '4px solid #b9790f', padding: '10px 14px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.85rem' }}>
                 <strong>{t('payroll.revise_reason_label')}</strong> {currentPayrollDoc.reviseReason}
               </div>
             )}
@@ -627,7 +627,7 @@ export default function PayrollTab({
                 </div>
                 <div className="payslip-row">
                   <span className="payslip-label">{t('payroll.actual_days_label')}</span>
-                  <span className="payslip-value" style={{ color: actualWorkDays === 0 ? '#dc2626' : 'inherit', fontWeight: '700' }}>
+                  <span className="payslip-value" style={{ color: actualWorkDays === 0 ? '#c0362a' : 'inherit', fontWeight: '700' }}>
                     {actualWorkDays}
                   </span>
                 </div>
@@ -641,7 +641,7 @@ export default function PayrollTab({
                 ? (workScheduleMode === 'rotating' ? t('payroll.ft_rotating_formula_note', { hours: standardHoursPerDay }) : t('payroll.ft_formula_note'))
                 : t('payroll.pt_formula_note')}
             </div>
-            <div className="payslip-row" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
+            <div className="payslip-row" style={{ borderTop: '1px solid #f5eee6', paddingTop: '10px' }}>
               <span className="payslip-label">{t('payroll.base_salary_label')}</span>
               <span className="payslip-value">{formatMoney(baseGross)}</span>
             </div>
@@ -799,7 +799,7 @@ export default function PayrollTab({
                 <input type="text" placeholder={t('payroll.bonus_reason_ph')} value={bonusReasonInput} onChange={(e) => setBonusReasonInput(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn-primary" style={{ flex: 1, backgroundColor: '#16a34a' }} onClick={handleSaveBonus} disabled={isSavingBonus}>
+                <button className="btn-primary" style={{ flex: 1, backgroundColor: '#23854f' }} onClick={handleSaveBonus} disabled={isSavingBonus}>
                   {isSavingBonus ? '...' : (editingBonusId ? t('common.update') : t('payroll.add_bonus_btn'))}
                 </button>
                 {editingBonusId && <button className="btn-secondary" onClick={() => { setEditingBonusId(null); setBonusInput(''); setBonusReasonInput(''); }}>{t('common.cancel')}</button>}
@@ -807,10 +807,10 @@ export default function PayrollTab({
               {currentBonusList.length > 0 && (
                 <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                   {currentBonusList.map(b => (
-                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f5eee6' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>{b.reason}</div>
-                        <div style={{ fontWeight: '700', color: '#16a34a' }}>+{formatMoney(b.amount)}</div>
+                        <div style={{ fontWeight: '700', color: '#23854f' }}>+{formatMoney(b.amount)}</div>
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button className="btn-warning" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={() => { setBonusInput(String(b.amount)); setBonusReasonInput(b.reason || ''); setEditingBonusId(b.id); }}>{t('common.edit')}</button>
@@ -844,10 +844,10 @@ export default function PayrollTab({
               {currentPenaltyList.length > 0 && (
                 <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                   {currentPenaltyList.map(p => (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f5eee6' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>{p.reason}</div>
-                        <div style={{ fontWeight: '700', color: '#dc2626' }}>-{formatMoney(p.amount)}</div>
+                        <div style={{ fontWeight: '700', color: '#c0362a' }}>-{formatMoney(p.amount)}</div>
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button className="btn-warning" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={() => { setPenaltyInput(String(p.amount)); setReasonInput(p.reason || ''); setEditingPenaltyId(p.id); }}>{t('common.edit')}</button>
@@ -884,12 +884,12 @@ export default function PayrollTab({
             <div className="form-group" style={{ margin: 0, minWidth: '210px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 {t('payroll.attendance_summary_label')}
-                <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>{t('payroll.auto_badge')}</span>
+                <span style={{ background: '#dcfce7', color: '#1f6b44', fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>{t('payroll.auto_badge')}</span>
               </label>
               <div style={{
-                border: '1.5px solid #10b981',
+                border: '1.5px solid #2e9e6a',
                 borderRadius: '8px', padding: '10px 12px', fontSize: '0.95rem',
-                fontWeight: '700', background: '#f0fdf4', color: '#166534',
+                fontWeight: '700', background: '#f0fdf4', color: '#1f6b44',
               }}>
                 {automaticWorkDays} {t('payroll.days_unit')} · {calcData.totalWorkHours.toFixed(2)}h
               </div>
@@ -919,7 +919,7 @@ export default function PayrollTab({
               onChange={(e) => setReviseReason(e.target.value)}
               style={{
                 width: '100%', padding: '10px', borderRadius: '8px',
-                border: reviseReason.trim() ? '1.5px solid #10b981' : '1.5px solid #dc2626',
+                border: reviseReason.trim() ? '1.5px solid #2e9e6a' : '1.5px solid #c0362a',
                 resize: 'vertical', fontFamily: 'inherit', fontSize: '0.9rem',
                 marginBottom: '16px', boxSizing: 'border-box',
               }}
@@ -929,7 +929,7 @@ export default function PayrollTab({
                 onClick={() => { setShowReviseModal(false); setReviseReason(''); }}>
                 {t('common.cancel')}
               </button>
-              <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#d97706', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+              <button style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#b9790f', color: 'white', fontWeight: '700', cursor: 'pointer' }}
                 onClick={handleRevise}>
                 {t('payroll.revise_confirm_btn')}
               </button>

@@ -173,7 +173,7 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
 
   const filtered = schedules.filter(s => filterStatus === 'all' ? true : s.status === filterStatus);
   const statusLabel = { pending: t('schedule.status_pending'), approved: t('schedule.status_approved'), rejected: t('schedule.status_rejected'), cancelled: t('schedule.status_cancelled') };
-  const statusColor = { pending: '#f59e0b', approved: '#10b981', rejected: '#ef4444', cancelled: '#94a3b8' };
+  const statusColor = { pending: '#e0a11b', approved: '#2e9e6a', rejected: '#d64533', cancelled: '#a39486' };
   const typeLabel = { shift_request: t('schedule.type_shift_request'), off_request: t('schedule.type_off_request'), auto_generated: t('schedule.type_auto') };
 
   return (
@@ -203,7 +203,7 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
             >
               {s === 'all' ? t('schedule.filter_all') : statusLabel[s]}
               {s === 'pending' && schedules.filter(x => x.status === 'pending').length > 0 && (
-                <span style={{ marginLeft: '6px', background: '#ef4444', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem' }}>
+                <span style={{ marginLeft: '6px', background: '#d64533', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem' }}>
                   {schedules.filter(x => x.status === 'pending').length}
                 </span>
               )}
@@ -215,8 +215,8 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
             onClick={() => setShowNotifPanel(v => !v)}
             style={{
               padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
-              background: showNotifPanel ? '#4f46e5' : 'white',
-              color: showNotifPanel ? 'white' : '#4f46e5',
+              background: showNotifPanel ? '#6b3a1f' : 'white',
+              color: showNotifPanel ? 'white' : '#6b3a1f',
               fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem',
               display: 'flex', alignItems: 'center', gap: '6px',
             }}
@@ -228,8 +228,8 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
 
       {/* ── Notification send panel ───────────────────────────────────────────── */}
       {showNotifPanel && (
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #e0e7ff' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', fontWeight: '700', color: '#4f46e5' }}>
+        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #f6ece2' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', fontWeight: '700', color: '#6b3a1f' }}>
             <i className="fas fa-paper-plane" style={{ marginRight: '8px' }}></i>{t('schedule.notify_panel_title')}
           </h3>
           <form onSubmit={handleSendNotif} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -278,7 +278,7 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
       <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-            <i className="fas fa-calendar-check" style={{ fontSize: '2.5rem', marginBottom: '12px', display: 'block', color: '#cbd5e1' }}></i>
+            <i className="fas fa-calendar-check" style={{ fontSize: '2.5rem', marginBottom: '12px', display: 'block', color: '#dccdbe' }}></i>
             {t('schedule.no_requests')}
           </div>
         ) : (
@@ -288,7 +288,7 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
               .map(s => (
                 <div key={s.id} style={{
                   border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px',
-                  borderLeft: `4px solid ${statusColor[s.status] || '#94a3b8'}`,
+                  borderLeft: `4px solid ${statusColor[s.status] || '#a39486'}`,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
@@ -300,7 +300,7 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
                         }}>
                           {statusLabel[s.status] || s.status}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: '#f1f5f9', padding: '2px 10px', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: '#f5eee6', padding: '2px 10px', borderRadius: '12px' }}>
                           {typeLabel[s.scheduleType] || s.scheduleType}
                         </span>
                       </div>
@@ -310,7 +310,7 @@ export default function ScheduleTab({ schedules, setSchedules, organizationId, d
                         {s.note && <span><i className="fas fa-comment" style={{ marginRight: '5px' }}></i>{s.note}</span>}
                       </div>
                       {s.status === 'rejected' && s.rejectReason && (
-                        <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#ef4444' }}>
+                        <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#d64533' }}>
                           <i className="fas fa-times-circle" style={{ marginRight: '5px' }}></i>{t('schedule.reject_reason_label', { reason: s.rejectReason })}
                         </div>
                       )}

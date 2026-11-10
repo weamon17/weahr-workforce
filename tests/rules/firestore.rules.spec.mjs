@@ -7,7 +7,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getCountFromServer, getDoc, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 const ORG_A = 'org-a';
 const ORG_B = 'org-b';
@@ -165,5 +165,15 @@ describe('audit logs', () => {
     await assertFails(deleteDoc(doc(db('managerA'), 'audit_logs', 'log-1')));
     await assertFails(updateDoc(doc(db('managerA'), 'audit_logs', 'log-1'), { action: 'hidden' }));
     await assertFails(getDoc(doc(db('employeeA1'), 'audit_logs', 'log-1')));
+  });
+});
+
+describe('onboarding checklist queries', () => {
+  test('managers can count their own invitations and sales rows; employees cannot', async () => {
+    const count = (uid, name, org = ORG_A) => getCountFromServer(query(collection(db(uid), name), where('organizationId', '==', org)));
+    await assertSucceeds(count('managerA', 'organization_invitations'));
+    await assertSucceeds(count('managerA', 'sales_records'));
+    await assertFails(count('employeeA1', 'organization_invitations'));
+    await assertFails(count('managerA', 'sales_records', ORG_B));
   });
 });

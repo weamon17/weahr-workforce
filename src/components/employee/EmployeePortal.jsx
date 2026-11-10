@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { db, auth } from '../../firebase';
 import WeeklyAvailabilityPanel from './WeeklyAvailabilityPanel';
 import SecureAttendanceButton from './SecureAttendanceButton';
+import AppShell from '../brand/AppShell';
 import { calculatePayroll } from '../../utils/payroll';
 import { localDateString } from '../../utils/time';
 
 export default function EmployeePortal({ currentUser, empProfile, showToast }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(() => {
     const view = new URLSearchParams(window.location.search).get('view');
     if (view === 'attendance') return 'checkin';
@@ -130,57 +131,19 @@ export default function EmployeePortal({ currentUser, empProfile, showToast }) {
   ];
 
   return (
-    <div className="app-container">
-      <header className="app-header no-print">
-        <div className="header-container">
-          <div className="header-brand">
-            <img src="/wea-hr-icon.svg" alt="WeaHR" style={{ width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0 }} />
-            <h1>WeaHR</h1>
-          </div>
-          <nav className="desktop-nav desktop-only">
-            {navItems.map(item => (
-              <button key={item.key} className={`nav-item ${activeTab === item.key ? 'active' : ''}`}
-                onClick={() => setActiveTab(item.key)} style={{ position: 'relative' }}>
-                <i className={item.icon}></i> {item.label}
-                {item.badge > 0 && (
-                  <span style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: 'white', borderRadius: '10px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: '700', lineHeight: 1.4 }}>
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-          <div className="header-actions desktop-only">
-            <button className="action-btn" onClick={() => i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi')} title="Switch language">
-              <i className="fas fa-globe"></i> <span>{i18n.language === 'vi' ? 'EN' : 'VI'}</span>
-            </button>
-            <div className="user-profile">
-              <div className="avatar" style={{ background: '#10b981' }}>{(empProfile?.fullName || currentUser?.email || 'E').charAt(0).toUpperCase()}</div>
-              <div className="user-info-text">
-                <span className="user-role">{t('nav.role_employee')}</span>
-                <span className="user-email">{empProfile?.fullName || currentUser?.email}</span>
-              </div>
-            </div>
-            <button className="logout-btn" onClick={() => signOut(auth)} title={t('nav.logout')}>
-              <i className="fas fa-sign-out-alt"></i>
-            </button>
-          </div>
-          {/* Mobile: compact actions thay cho hamburger */}
-          <div className="mobile-only" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button className="action-btn" onClick={() => i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi')} style={{ padding: '6px 10px', fontSize: '0.8rem' }}>
-              <i className="fas fa-globe"></i> {i18n.language === 'vi' ? 'EN' : 'VI'}
-            </button>
-            <button className="logout-btn" onClick={() => signOut(auth)}>
-              <i className="fas fa-sign-out-alt"></i>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="app-main" style={{ maxWidth: '900px', margin: '0 auto', width: '100%', padding: '20px' }}>
+    <AppShell
+      navItems={navItems}
+      activeTab={activeTab}
+      onNavigate={setActiveTab}
+      primaryKeys={['home', 'checkin', 'schedule', 'payroll']}
+      userName={empProfile?.fullName || currentUser?.email}
+      roleLabel={t('nav.role_employee')}
+      onLogout={() => signOut(auth)}
+    >
+      <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem' }}></i>
+            <div className="spinner" style={{ margin: '0 auto' }}></div>
           </div>
         ) : (
           <>
@@ -193,28 +156,7 @@ export default function EmployeePortal({ currentUser, empProfile, showToast }) {
           </>
         )}
       </div>
-
-      <footer className="app-footer no-print">
-        &copy; {new Date().getFullYear()} WeaHR. {t('nav.all_rights')}.
-      </footer>
-
-      {/* Bottom Navigation — mobile employee */}
-      <nav className="bottom-nav no-print">
-        {navItems.map(item => (
-          <button
-            key={item.key}
-            className={`bottom-nav-item ${activeTab === item.key ? 'active' : ''}`}
-            onClick={() => setActiveTab(item.key)}
-          >
-            {item.badge > 0 && (
-              <span className="bottom-nav-badge">{item.badge > 9 ? '9+' : item.badge}</span>
-            )}
-            <i className={item.icon}></i>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
-    </div>
+    </AppShell>
   );
 }
 
@@ -261,13 +203,13 @@ function HomeView({ empProfile, todaySchedule, todayAttendance, myAttendance, to
 
       {/* Check-in status card */}
       <div style={{
-        background: checkedOut ? '#f0fdf4' : checkedIn ? '#fffbeb' : '#f8fafc',
-        border: `2px solid ${checkedOut ? '#10b981' : checkedIn ? '#f59e0b' : '#e2e8f0'}`,
+        background: checkedOut ? '#f0fdf4' : checkedIn ? '#fffbeb' : '#faf6f1',
+        border: `2px solid ${checkedOut ? '#2e9e6a' : checkedIn ? '#e0a11b' : '#ece2d6'}`,
         borderRadius: '16px', padding: '20px 24px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
           <div>
-            <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem', color: checkedOut ? '#10b981' : checkedIn ? '#f59e0b' : 'var(--text-muted)' }}>
+            <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem', color: checkedOut ? '#2e9e6a' : checkedIn ? '#e0a11b' : 'var(--text-muted)' }}>
               {checkedOut ? `✅ ${t('portal.status_done')}` : checkedIn ? `🟡 ${t('portal.status_working')}` : `⏳ ${t('portal.status_pending')}`}
             </p>
             {todaySchedule ? (
@@ -293,10 +235,10 @@ function HomeView({ empProfile, todaySchedule, todayAttendance, myAttendance, to
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
         {[
-          { label: t('portal.stat_hours'), value: `${totalMonthHours.toFixed(1)}h`, color: '#4f46e5' },
-          { label: t('portal.stat_bonus'), value: formatMoney(monthBonus), color: '#10b981' },
-          { label: t('portal.stat_penalty'), value: formatMoney(monthPenalty), color: '#ef4444' },
-          { label: t('portal.stat_estimated'), value: formatMoney(estimatedPay), color: '#0ea5e9' },
+          { label: t('portal.stat_hours'), value: `${totalMonthHours.toFixed(1)}h`, color: '#6b3a1f' },
+          { label: t('portal.stat_bonus'), value: formatMoney(monthBonus), color: '#2e9e6a' },
+          { label: t('portal.stat_penalty'), value: formatMoney(monthPenalty), color: '#d64533' },
+          { label: t('portal.stat_estimated'), value: formatMoney(estimatedPay), color: '#2f6f8f' },
         ].map(item => (
           <div key={item.label} style={{ background: 'white', borderRadius: '14px', padding: '16px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', borderTop: `3px solid ${item.color}` }}>
             <p style={{ margin: '0 0 6px', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600' }}>{item.label}</p>
@@ -353,8 +295,8 @@ function CheckinView({ todaySchedule, todayAttendance, setTodayAttendance, showT
       {/* Today's schedule info */}
       {todaySchedule ? (
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '14px 20px', width: '100%', maxWidth: '400px' }}>
-          <p style={{ margin: 0, fontWeight: '700', color: '#0369a1' }}>{t('portal.shift_approved')}</p>
-          <p style={{ margin: '4px 0 0', color: '#0369a1', fontSize: '0.9rem' }}>
+          <p style={{ margin: 0, fontWeight: '700', color: '#245a75' }}>{t('portal.shift_approved')}</p>
+          <p style={{ margin: '4px 0 0', color: '#245a75', fontSize: '0.9rem' }}>
             {todaySchedule.startTime} – {todaySchedule.endTime}
           </p>
         </div>
@@ -370,9 +312,9 @@ function CheckinView({ todaySchedule, todayAttendance, setTodayAttendance, showT
       {/* Attendance status */}
       {todayAttendance && (
         <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', padding: '14px 20px', width: '100%', maxWidth: '400px' }}>
-          <p style={{ margin: 0, color: '#15803d', fontWeight: '600' }}>Check-in: {todayAttendance.checkIn}</p>
-          {todayAttendance.checkOut && <p style={{ margin: '4px 0 0', color: '#15803d', fontWeight: '600' }}>Check-out: {todayAttendance.checkOut}</p>}
-          {todayAttendance.workHours > 0 && <p style={{ margin: '4px 0 0', color: '#15803d', fontSize: '0.9rem' }}>{t('portal.total_hours_info')} {todayAttendance.workHours.toFixed(2)}h</p>}
+          <p style={{ margin: 0, color: '#1f6b44', fontWeight: '600' }}>Check-in: {todayAttendance.checkIn}</p>
+          {todayAttendance.checkOut && <p style={{ margin: '4px 0 0', color: '#1f6b44', fontWeight: '600' }}>Check-out: {todayAttendance.checkOut}</p>}
+          {todayAttendance.workHours > 0 && <p style={{ margin: '4px 0 0', color: '#1f6b44', fontSize: '0.9rem' }}>{t('portal.total_hours_info')} {todayAttendance.workHours.toFixed(2)}h</p>}
         </div>
       )}
 
@@ -418,7 +360,7 @@ function ScheduleView({ empProfile, currentUser, mySchedules, setMySchedules, db
     rejected: t('portal.status_rejected_label'),
     cancelled: t('portal.status_cancelled_label'),
   };
-  const statusColor = { pending: '#f59e0b', approved: '#10b981', rejected: '#ef4444', cancelled: '#94a3b8' };
+  const statusColor = { pending: '#e0a11b', approved: '#2e9e6a', rejected: '#d64533', cancelled: '#a39486' };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -516,7 +458,7 @@ function ScheduleView({ empProfile, currentUser, mySchedules, setMySchedules, db
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[...mySchedules].sort((a, b) => b.workDate?.localeCompare(a.workDate)).map(s => (
-              <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', borderLeft: `4px solid ${statusColor[s.status] || '#94a3b8'}` }}>
+              <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', borderLeft: `4px solid ${statusColor[s.status] || '#a39486'}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <span style={{ fontWeight: '700', marginRight: '10px' }}>{s.workDate}</span>
@@ -527,7 +469,7 @@ function ScheduleView({ empProfile, currentUser, mySchedules, setMySchedules, db
                       </span>
                     </div>
                     {s.status === 'rejected' && s.rejectReason && (
-                      <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#ef4444' }}>{t('portal.reject_reason')} {s.rejectReason}</p>
+                      <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#d64533' }}>{t('portal.reject_reason')} {s.rejectReason}</p>
                     )}
                   </div>
                   {s.status === 'pending' && (
@@ -556,11 +498,11 @@ function TimesheetView({ myAttendance, currentMonth }) {
   const totalLate = monthRecords.reduce((s, r) => s + (r.lateHours || 0), 0);
 
   const statusTag = (r) => {
-    if (r.status === 'off') return { label: t('portal.tag_off'), color: '#ef4444' };
-    if (r.status === 'missing_checkout') return { label: t('portal.tag_missing_checkout'), color: '#ef4444' };
-    if (r.lateHours > 0) return { label: `${t('portal.tag_late')} ${r.lateHours.toFixed(2)}h`, color: '#f59e0b' };
-    if (r.otHours > 0) return { label: `OT ${r.otHours}h`, color: '#8b5cf6' };
-    return { label: t('portal.tag_on_time'), color: '#10b981' };
+    if (r.status === 'off') return { label: t('portal.tag_off'), color: '#d64533' };
+    if (r.status === 'missing_checkout') return { label: t('portal.tag_missing_checkout'), color: '#d64533' };
+    if (r.lateHours > 0) return { label: `${t('portal.tag_late')} ${r.lateHours.toFixed(2)}h`, color: '#e0a11b' };
+    if (r.otHours > 0) return { label: `OT ${r.otHours}h`, color: '#2f6f8f' };
+    return { label: t('portal.tag_on_time'), color: '#2e9e6a' };
   };
 
   return (
@@ -574,8 +516,8 @@ function TimesheetView({ myAttendance, currentMonth }) {
         {[
           { label: t('portal.work_days'), value: monthRecords.filter(r => r.status !== 'off').length },
           { label: t('portal.total_hours_label'), value: `${totalHours.toFixed(1)}h` },
-          { label: t('portal.ot_hours_label'), value: `${totalOT.toFixed(1)}h`, color: '#8b5cf6' },
-          { label: t('portal.late_hours_label'), value: `${totalLate.toFixed(1)}h`, color: '#ef4444' },
+          { label: t('portal.ot_hours_label'), value: `${totalOT.toFixed(1)}h`, color: '#2f6f8f' },
+          { label: t('portal.late_hours_label'), value: `${totalLate.toFixed(1)}h`, color: '#d64533' },
         ].map(item => (
           <div key={item.label} style={{ background: 'white', borderRadius: '12px', padding: '14px 16px', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
             <p style={{ margin: '0 0 4px', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600' }}>{item.label}</p>
@@ -643,7 +585,7 @@ function NotificationsView({ myNotifications, setMyNotifications, db, listenerEr
   };
 
   const typeIcon = { schedule_approved: '✅', schedule_rejected: '❌', custom: '🔔' };
-  const typeAccent = { schedule_approved: '#10b981', schedule_rejected: '#ef4444', custom: '#4f46e5' };
+  const typeAccent = { schedule_approved: '#2e9e6a', schedule_rejected: '#d64533', custom: '#6b3a1f' };
 
   const formatTime = (ts) => {
     if (!ts) return '';
@@ -666,10 +608,10 @@ function NotificationsView({ myNotifications, setMyNotifications, db, listenerEr
 
       {listenerError && (
         <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '14px 18px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-          <i className="fas fa-exclamation-circle" style={{ color: '#ef4444', marginTop: '2px', flexShrink: 0 }}></i>
+          <i className="fas fa-exclamation-circle" style={{ color: '#d64533', marginTop: '2px', flexShrink: 0 }}></i>
           <div>
-            <p style={{ margin: 0, fontWeight: '700', color: '#dc2626', fontSize: '0.9rem' }}>{t('portal.notif_load_failed')}</p>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#ef4444' }}>{t('portal.error_code')} <code>{listenerError}</code></p>
+            <p style={{ margin: 0, fontWeight: '700', color: '#c0362a', fontSize: '0.9rem' }}>{t('portal.notif_load_failed')}</p>
+            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#d64533' }}>{t('portal.error_code')} <code>{listenerError}</code></p>
             <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#7f1d1d' }}>
               {t('portal.notif_load_help')}
             </p>
@@ -680,7 +622,7 @@ function NotificationsView({ myNotifications, setMyNotifications, db, listenerEr
       <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         {myNotifications.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-            <i className="fas fa-bell" style={{ fontSize: '2.5rem', marginBottom: '12px', display: 'block', color: '#cbd5e1' }}></i>
+            <i className="fas fa-bell" style={{ fontSize: '2.5rem', marginBottom: '12px', display: 'block', color: '#dccdbe' }}></i>
             <p style={{ margin: 0 }}>{t('portal.notif_empty')}</p>
           </div>
         ) : (
@@ -693,8 +635,8 @@ function NotificationsView({ myNotifications, setMyNotifications, db, listenerEr
                   padding: '14px 16px', borderRadius: '12px',
                   cursor: notif.read ? 'default' : 'pointer',
                   background: notif.read ? 'white' : '#f0f4ff',
-                  border: `1px solid ${notif.read ? 'var(--border)' : '#c7d2fe'}`,
-                  borderLeft: `4px solid ${typeAccent[notif.type] || '#4f46e5'}`,
+                  border: `1px solid ${notif.read ? 'var(--border)' : '#e8d3bf'}`,
+                  borderLeft: `4px solid ${typeAccent[notif.type] || '#6b3a1f'}`,
                   transition: 'background 0.15s',
                 }}
               >
@@ -708,7 +650,7 @@ function NotificationsView({ myNotifications, setMyNotifications, db, listenerEr
                         {notif.title}
                       </p>
                       {!notif.read && (
-                        <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0, marginTop: '5px' }}></span>
+                        <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#6b3a1f', flexShrink: 0, marginTop: '5px' }}></span>
                       )}
                     </div>
                     <p style={{ margin: '5px 0 8px', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55, wordBreak: 'break-word' }}>
@@ -793,7 +735,7 @@ function PayrollView({ empProfile, myAttendance, myBonusPenalties, myPayrolls, c
 
       {finalizedPayroll && (
         <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', padding: '14px 20px' }}>
-          <p style={{ margin: 0, color: '#15803d', fontWeight: '700' }}>
+          <p style={{ margin: 0, color: '#1f6b44', fontWeight: '700' }}>
             <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
             {t('portal.finalized_msg')} {formatMoney(finalizedPayroll.netSalary)}
           </p>
@@ -803,7 +745,7 @@ function PayrollView({ empProfile, myAttendance, myBonusPenalties, myPayrolls, c
       <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: '700' }}>
           {t('portal.month_label')} {viewMonth.split('-')[1]}/{viewMonth.split('-')[0]}
-          <span style={{ marginLeft: '10px', fontSize: '0.75rem', fontWeight: '600', padding: '3px 10px', borderRadius: '10px', background: '#fef3c7', color: '#d97706' }}>
+          <span style={{ marginLeft: '10px', fontSize: '0.75rem', fontWeight: '600', padding: '3px 10px', borderRadius: '10px', background: '#fef3c7', color: '#b9790f' }}>
             {finalizedPayroll ? t('portal.finalized_badge') : t('portal.estimated_badge')}
           </span>
         </h3>
@@ -821,7 +763,7 @@ function PayrollView({ empProfile, myAttendance, myBonusPenalties, myPayrolls, c
           ].filter(Boolean).map((row, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.label}</span>
-              <span style={{ fontWeight: '700', color: row.positive ? '#10b981' : '#ef4444' }}>
+              <span style={{ fontWeight: '700', color: row.positive ? '#2e9e6a' : '#d64533' }}>
                 {row.positive ? '+' : '-'} {row.value}
               </span>
             </div>
@@ -848,7 +790,7 @@ function PayrollView({ empProfile, myAttendance, myBonusPenalties, myPayrolls, c
           {myBonusPenalties.filter(b => b.appliedDate?.startsWith(viewMonth)).map(item => (
             <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
               <span style={{ fontSize: '0.9rem' }}>{item.type === 'bonus' ? '🎁' : '⚠️'} {item.reason || t('portal.no_reason')}</span>
-              <span style={{ fontWeight: '700', color: item.type === 'bonus' ? '#10b981' : '#ef4444' }}>
+              <span style={{ fontWeight: '700', color: item.type === 'bonus' ? '#2e9e6a' : '#d64533' }}>
                 {item.type === 'bonus' ? '+' : '-'}{formatMoney(item.amount)}
               </span>
             </div>

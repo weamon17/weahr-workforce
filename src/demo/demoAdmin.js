@@ -21,14 +21,31 @@ export const createDemoAdminSession = email => {
       position: 'Quản lý ca', employmentStatus: 'active', standardWorkDays: 26, standardHoursPerDay: 8,
       freeOffDays: 2, standardStart: '08:00', standardEnd: '17:00', phone: '0900000002', startDate: `${month}-01`,
     },
+    'Lê Chi': {
+      employeeId: 'demo-employee-chi', employeeDocumentId: 'demo-org_demo-employee-chi', organizationId: 'demo-org',
+      employeeCode: 'NV003', fullName: 'Lê Chi', type: 'parttime', salary: 28000,
+      position: 'Phục vụ', employmentStatus: 'active', phone: '0900000003', startDate: `${month}-01`,
+    },
+    'Phạm Dũng': {
+      employeeId: 'demo-employee-dung', employeeDocumentId: 'demo-org_demo-employee-dung', organizationId: 'demo-org',
+      employeeCode: 'NV004', fullName: 'Phạm Dũng', type: 'parttime', salary: 30000,
+      position: 'Thu ngân', employmentStatus: 'active', phone: '0900000004', startDate: `${month}-01`,
+    },
   };
   const records = [
     { id: 'demo-ts-1', organizationId: 'demo-org', employeeId: 'demo-employee-an', employeeName: 'Nguyễn An', type: 'parttime', date: yesterday, status: 'work', checkIn: '08:02', checkOut: '14:05', workHours: 6.05, lateHours: 0, otHours: 0, dayRate: 1 },
     { id: 'demo-ts-2', organizationId: 'demo-org', employeeId: 'demo-employee-binh', employeeName: 'Trần Bình', type: 'fulltime', date: yesterday, status: 'late', checkIn: '08:18', checkOut: '17:20', workHours: 9.03, lateHours: 0.3, otHours: 0.33, dayRate: 1 },
     { id: 'demo-ts-3', organizationId: 'demo-org', employeeId: 'demo-employee-an', employeeName: 'Nguyễn An', type: 'parttime', date: today, status: 'work', checkIn: '07:58', checkOut: '14:00', workHours: 6.03, lateHours: 0, otHours: 0, dayRate: 1 },
+    { id: 'demo-ts-4', organizationId: 'demo-org', employeeId: 'demo-employee-binh', employeeName: 'Trần Bình', type: 'fulltime', date: today, status: 'work', checkIn: '08:12', workHours: 0, lateHours: 0.2, otHours: 0, dayRate: 1 },
+    { id: 'demo-ts-5', organizationId: 'demo-org', employeeId: 'demo-employee-dung', employeeName: 'Phạm Dũng', type: 'parttime', date: today, status: 'work', checkIn: '06:55', workHours: 0, lateHours: 0, otHours: 0, dayRate: 1 },
+    { id: 'demo-ts-6', organizationId: 'demo-org', employeeId: 'demo-employee-chi', employeeName: 'Lê Chi', type: 'parttime', date: yesterday, status: 'work', checkIn: '13:59', checkOut: '22:01', workHours: 8.03, lateHours: 0, otHours: 0.03, dayRate: 1 },
   ];
   const schedules = [
     { id: 'demo-schedule-1', organizationId: 'demo-org', employeeId: 'demo-employee-an', employeeName: 'Nguyễn An', workDate: today, startTime: '08:00', endTime: '14:00', status: 'approved', scheduleType: 'shift_request' },
+    { id: 'demo-schedule-3', organizationId: 'demo-org', employeeId: 'demo-employee-binh', employeeName: 'Trần Bình', workDate: today, startTime: '08:00', endTime: '17:00', status: 'approved', scheduleType: 'shift_request' },
+    { id: 'demo-schedule-4', organizationId: 'demo-org', employeeId: 'demo-employee-dung', employeeName: 'Phạm Dũng', workDate: today, startTime: '07:00', endTime: '13:00', status: 'approved', scheduleType: 'shift_request' },
+    { id: 'demo-schedule-5', organizationId: 'demo-org', employeeId: 'demo-employee-chi', employeeName: 'Lê Chi', workDate: today, startTime: '08:00', endTime: '14:00', status: 'approved', scheduleType: 'shift_request' },
+    { id: 'demo-schedule-6', organizationId: 'demo-org', employeeId: 'demo-employee-chi', employeeName: 'Lê Chi', workDate: tomorrow, startTime: '14:00', endTime: '22:00', status: 'pending', scheduleType: 'shift_request' },
     { id: 'demo-schedule-2', organizationId: 'demo-org', employeeId: 'demo-employee-binh', employeeName: 'Trần Bình', workDate: tomorrow, startTime: '08:00', endTime: '17:00', status: 'pending', scheduleType: 'shift_request' },
   ];
   const salesRecords = Array.from({ length: 28 }, (_, index) => {
@@ -40,6 +57,7 @@ export const createDemoAdminSession = email => {
   return {
     currentUser: { uid: 'demo-admin-local', email, emailVerified: true },
     userProfile: { uid: 'demo-admin-local', email, fullName: 'Admin Demo', role: 'manager', status: 'active', isOrganizationOwner: true, organizationId: 'demo-org' },
+    organization: { organizationId: 'demo-org', name: 'Quán Cà Phê Mẫu', subscriptionStatus: 'demo' },
     employees,
     records,
     schedules,

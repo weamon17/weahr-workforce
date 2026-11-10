@@ -5,9 +5,9 @@ import { getTrialStatus } from '../../utils/trial';
 const SALES_EMAIL = 'weahr0426@gmail.com';
 
 const TONES = {
-  trialing: { background: '#eef2ff', color: '#3730a3', icon: 'fas fa-gift' },
+  trialing: { background: '#f6ece2', color: '#552d17', icon: 'fas fa-gift' },
   ending: { background: '#fffbeb', color: '#92400e', icon: 'fas fa-hourglass-half' },
-  expired: { background: '#fef2f2', color: '#991b1b', icon: 'fas fa-exclamation-circle' },
+  expired: { background: '#fef2f2', color: '#8a251c', icon: 'fas fa-exclamation-circle' },
 };
 
 export default function TrialBanner({ organization }) {

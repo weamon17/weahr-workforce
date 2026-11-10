@@ -127,12 +127,12 @@ export default function BusinessInsightsTab({ db, organizationId, records, saved
   };
 
   const kpis = [
-    [t('insights.kpi_cost_ratio'), `${metrics.laborCostRatio}%`, '#4f46e5'],
-    [t('insights.kpi_revenue_per_hour'), money(metrics.revenuePerLaborHour), '#0ea5e9'],
+    [t('insights.kpi_cost_ratio'), `${metrics.laborCostRatio}%`, '#6b3a1f'],
+    [t('insights.kpi_revenue_per_hour'), money(metrics.revenuePerLaborHour), '#2f6f8f'],
     [t('insights.kpi_avoidable_ot'), money(metrics.estimatedAvoidableOvertime), '#f97316'],
-    [t('insights.kpi_gap'), `${staffingGap.shortage} / ${staffingGap.surplus}`, '#dc2626'],
-    [t('insights.kpi_labor_cost'), money(metrics.laborCost), '#7c3aed'],
-    [t('insights.kpi_savings'), money(metrics.estimatedAvoidableOvertime), '#059669'],
+    [t('insights.kpi_gap'), `${staffingGap.shortage} / ${staffingGap.surplus}`, '#c0362a'],
+    [t('insights.kpi_labor_cost'), money(metrics.laborCost), '#2f6f8f'],
+    [t('insights.kpi_savings'), money(metrics.estimatedAvoidableOvertime), '#23854f'],
   ];
 
   if (loading) return <div className="card">{t('insights.loading')}</div>;
@@ -145,31 +145,31 @@ export default function BusinessInsightsTab({ db, organizationId, records, saved
             <p style={{ color: 'var(--text-muted)', margin: '6px 0 0' }}>{t('insights.subtitle')}</p>
           </div>
           <div style={{ display: 'flex', gap: '9px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <input type="month" value={periodMonth} onChange={event => setPeriodMonth(event.target.value)} aria-label={t('insights.aria_month')} style={{ padding: '9px', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+            <input type="month" value={periodMonth} onChange={event => setPeriodMonth(event.target.value)} aria-label={t('insights.aria_month')} style={{ padding: '9px', border: '1px solid #dccdbe', borderRadius: '8px' }} />
             <label className="btn-primary" style={{ cursor: importing ? 'wait' : 'pointer' }}>
               {importing ? t('insights.importing') : t('insights.import')}
               <input type="file" accept=".xlsx,.csv" onChange={importSales} disabled={importing} hidden />
             </label>
           </div>
         </div>
-        <p style={{ fontSize: '.85rem', color: '#64748b' }}>{t('insights.columns_help')}</p>
+        <p style={{ fontSize: '.85rem', color: '#75665b' }}>{t('insights.columns_help')}</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px', marginTop: '18px' }}>
-          {kpis.map(([label, value, color]) => <div key={label} style={{ padding: '16px', borderRadius: '13px', background: '#f8fafc', borderTop: `3px solid ${color}` }}><small style={{ color: '#64748b' }}>{label}</small><div style={{ fontSize: '1.25rem', fontWeight: 800, color, marginTop: '5px' }}>{value}</div></div>)}
+          {kpis.map(([label, value, color]) => <div key={label} style={{ padding: '16px', borderRadius: '13px', background: '#faf6f1', borderTop: `3px solid ${color}` }}><small style={{ color: '#75665b' }}>{label}</small><div style={{ fontSize: '1.25rem', fontWeight: 800, color, marginTop: '5px' }}>{value}</div></div>)}
         </div>
       </section>
 
       <section className="card" style={{ padding: '22px', marginTop: '18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div><h3 style={{ margin: 0 }}>{t('insights.forecast_title')}</h3><p style={{ margin: '5px 0 0', color: '#64748b' }}>{t('insights.history_slots', { count: salesRecords.length })}</p></div>
+          <div><h3 style={{ margin: 0 }}>{t('insights.forecast_title')}</h3><p style={{ margin: '5px 0 0', color: '#75665b' }}>{t('insights.history_slots', { count: salesRecords.length })}</p></div>
           <label>{t('insights.target_productivity')} <input type="number" min="1" value={ordersPerEmployeeHour} onChange={event => setOrdersPerEmployeeHour(Math.max(1, Number(event.target.value)))} style={{ width: '75px', padding: '7px', marginLeft: '6px' }} /> {t('insights.orders_per_person_hour')}</label>
         </div>
-        {salesRecords.length === 0 ? <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>{t('insights.need_history')}</div> : (
+        {salesRecords.length === 0 ? <div style={{ padding: '40px', textAlign: 'center', color: '#75665b' }}>{t('insights.need_history')}</div> : (
           <div className="table-responsive" style={{ marginTop: '14px', maxHeight: '520px', overflow: 'auto' }}>
             <table><thead><tr><th>{t('insights.col_slot')}</th><th>{t('insights.col_orders')}</th><th>{t('insights.col_staff')}</th><th>{t('insights.col_scheduled')}</th><th>{t('insights.col_confidence')}</th><th>{t('insights.col_reason')}</th></tr></thead><tbody>
               {forecasts.map(item => {
                 const scheduled = scheduledPeopleAt(schedules, item.date, item.hour);
-                return <tr key={`${item.date}_${item.hour}`}><td>{item.date} · {String(item.hour).padStart(2, '0')}:00</td><td><b>{item.predictedOrders}</b></td><td>{item.staffRequired}</td><td style={{ color: scheduled < item.staffRequired ? '#dc2626' : '#059669', fontWeight: 700 }}>{scheduled}</td><td>{t(`insights.confidence_${item.confidenceLevel}`)} ({Math.round(item.confidenceScore * 100)}%)</td><td style={{ minWidth: '280px', fontSize: '.85rem' }}>{t('insights.explanation', { count: item.sampleCount, average: item.averageOrders })}{item.trendPercent ? t(item.trendPercent > 0 ? 'insights.trend_up' : 'insights.trend_down', { percent: Math.abs(item.trendPercent) }) : ''}.</td></tr>;
+                return <tr key={`${item.date}_${item.hour}`}><td>{item.date} · {String(item.hour).padStart(2, '0')}:00</td><td><b>{item.predictedOrders}</b></td><td>{item.staffRequired}</td><td style={{ color: scheduled < item.staffRequired ? '#c0362a' : '#23854f', fontWeight: 700 }}>{scheduled}</td><td>{t(`insights.confidence_${item.confidenceLevel}`)} ({Math.round(item.confidenceScore * 100)}%)</td><td style={{ minWidth: '280px', fontSize: '.85rem' }}>{t('insights.explanation', { count: item.sampleCount, average: item.averageOrders })}{item.trendPercent ? t(item.trendPercent > 0 ? 'insights.trend_up' : 'insights.trend_down', { percent: Math.abs(item.trendPercent) }) : ''}.</td></tr>;
               })}
             </tbody></table>
           </div>

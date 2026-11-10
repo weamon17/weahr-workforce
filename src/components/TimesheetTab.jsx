@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { calculateHours, calculateLateHours, calculateOvertimeHours } from '../utils/time';
+import { calculateHours, calculateLateHours, calculateOvertimeHours, localDateString } from '../utils/time';
+
+// An open record from an earlier day means the employee forgot to check out;
+// today's open record simply means they are still on shift.
+const isForgottenCheckout = (record, today) => record.status === 'work' && !record.checkOut && record.date < today;
+const isStillWorking = (record, today) => record.status === 'work' && !record.checkOut && record.date >= today;
 import AttendanceSecurityPanel from './manager/AttendanceSecurityPanel';
 import { buildEmployeeDocumentId } from '../utils/employee';
 import { downloadCsv } from '../utils/csv';
@@ -10,12 +15,12 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
   const { t, i18n } = useTranslation();
 
   const STATUS_FILTERS = useMemo(() => [
-    { value: 'all',              label: t('timesheet_extra.filter_status_all'),     color: '#64748b' },
-    { value: 'work',             label: t('timesheet_extra.filter_status_work'),    color: '#10b981' },
+    { value: 'all',              label: t('timesheet_extra.filter_status_all'),     color: '#75665b' },
+    { value: 'work',             label: t('timesheet_extra.filter_status_work'),    color: '#2e9e6a' },
     { value: 'late',             label: t('timesheet_extra.filter_status_late'),    color: '#eab308' },
     { value: 'ot',               label: t('timesheet_extra.filter_status_ot'),      color: '#f97316' },
-    { value: 'off',              label: t('timesheet_extra.filter_status_off'),     color: '#ef4444' },
-    { value: 'missing_checkout', label: t('timesheet_extra.filter_status_missing'), color: '#8b5cf6' },
+    { value: 'off',              label: t('timesheet_extra.filter_status_off'),     color: '#d64533' },
+    { value: 'missing_checkout', label: t('timesheet_extra.filter_status_missing'), color: '#2f6f8f' },
   ], [t]);
 
   const DAY_HEADERS = useMemo(() => [
@@ -26,6 +31,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
 
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showManualForm, setShowManualForm] = useState(false);
   const [editReason, setEditReason] = useState('');
 
   const [employeeName, setEmployeeName] = useState('');
@@ -198,6 +204,8 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
 
   const handleEditClick = (record) => {
     setEditingId(record.id);
+    setShowManualForm(true);
+    window.scrollTo?.({ top: 0, behavior: 'smooth' });
     setEditReason('');
     setEmployeeName(record.employeeName);
     const empData = savedEmployees[record.employeeName];
@@ -281,7 +289,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
           result = result.filter(r => r.status === 'off');
           break;
         case 'missing_checkout':
-          result = result.filter(r => r.status === 'work' && !r.checkOut);
+          result = result.filter(r => isForgottenCheckout(r, localDateString()));
           break;
       }
     }
@@ -306,7 +314,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
       off: base.filter(r => r.status === 'off').length,
       late: base.filter(r => r.status === 'work' && r.lateHours > 0).length,
       ot: base.filter(r => r.status === 'work' && r.otHours > 0).length,
-      missing: base.filter(r => r.status === 'work' && !r.checkOut).length,
+      missing: base.filter(r => isForgottenCheckout(r, localDateString())).length,
     };
   }, [records, filterMonth]);
 
@@ -314,10 +322,10 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
   const chipStyle = (bg, color) => ({ background: bg, color, padding: '2px 8px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: '700', whiteSpace: 'nowrap' });
 
   const renderFormStatusTag = () => {
-    if (recordStatus === 'off') return <span style={tagStyle('#fee2e2', '#b91c1c')}>{t('timesheet_extra.tag_off')}</span>;
+    if (recordStatus === 'off') return <span style={tagStyle('#fee2e2', '#9a2a20')}>{t('timesheet_extra.tag_off')}</span>;
     if (Number(lateHours) > 0) return <span style={tagStyle('#fef08a', '#a16207')}>{t('timesheet_extra.tag_late')}</span>;
     if (Number(otHours) > 0) return <span style={tagStyle('#ffedd5', '#c2410c')}>{t('timesheet_extra.tag_ot')}</span>;
-    return <span style={tagStyle('#dcfce7', '#15803d')}>{t('timesheet_extra.filter_status_work')}</span>;
+    return <span style={tagStyle('#dcfce7', '#1f6b44')}>{t('timesheet_extra.filter_status_work')}</span>;
   };
 
   const renderRowTag = (r) => {
@@ -326,11 +334,12 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
       ? <span style={chipStyle('#fce7f3', '#be185d')}>×{rate} {t('timesheet_extra.tag_holiday')}</span>
       : null;
     let statusBadge;
-    if (r.status === 'off') statusBadge = <span style={chipStyle('#fee2e2', '#b91c1c')}>{t('timesheet_extra.tag_off')}</span>;
-    else if (!r.checkOut && r.status === 'work') statusBadge = <span style={chipStyle('#ede9fe', '#7c3aed')}>{t('timesheet_extra.tag_missing_co')}</span>;
+    if (r.status === 'off') statusBadge = <span style={chipStyle('#fee2e2', '#9a2a20')}>{t('timesheet_extra.tag_off')}</span>;
+    else if (isStillWorking(r, localDateString())) statusBadge = <span style={chipStyle('#e4f3ea', '#23854f')}>{t('home.status_working')}</span>;
+    else if (isForgottenCheckout(r, localDateString())) statusBadge = <span style={chipStyle('#fbe9e6', '#c0362a')}>{t('timesheet_extra.tag_missing_co')}</span>;
     else if (r.lateHours > 0) statusBadge = <span style={chipStyle('#fef08a', '#a16207')}>{t('timesheet_extra.tag_late')}</span>;
     else if (r.otHours > 0) statusBadge = <span style={chipStyle('#ffedd5', '#c2410c')}>{t('timesheet_extra.tag_ot')}</span>;
-    else statusBadge = <span style={chipStyle('#dcfce7', '#15803d')}>{t('timesheet_extra.tag_ok')}</span>;
+    else statusBadge = <span style={chipStyle('#dcfce7', '#1f6b44')}>{t('timesheet_extra.tag_ok')}</span>;
     return <span style={{ display: 'inline-flex', gap: '4px', flexWrap: 'wrap' }}>{holidayBadge}{statusBadge}</span>;
   };
 
@@ -338,13 +347,14 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
     const emp = savedEmployees[name];
     if (!emp) return null;
     return emp.type === 'fulltime'
-      ? <span style={chipStyle('#dbeafe', '#1d4ed8')}>FT</span>
-      : <span style={chipStyle('#f3e8ff', '#7c3aed')}>PT</span>;
+      ? <span style={chipStyle('#e3eff4', '#2f6f8f')}>{t('timesheet_extra.filter_fulltime')}</span>
+      : <span style={chipStyle('#fbead6', '#6b3a1f')}>{t('timesheet_extra.filter_parttime')}</span>;
   };
 
   const exportToExcel = () => {
     const statusLabel = (r) => {
       if (r.status === 'off') return t('timesheet_extra.tag_off');
+      if (isStillWorking(r, localDateString())) return t('home.status_working');
       if (!r.checkOut) return t('timesheet_extra.tag_missing_co');
       if (r.lateHours > 0) return t('timesheet_extra.tag_late');
       if (r.otHours > 0) return t('timesheet_extra.tag_ot');
@@ -368,8 +378,20 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
 
   return (
     <>
-    {!demoMode && <AttendanceSecurityPanel organizationId={organizationId} db={db} showToast={showToast} />}
-      {/* ─── FORM + CALENDAR ─── */}
+      <div className="page-head">
+        <div>
+          <h2 className="page-title">{t('timesheet_extra.page_title')}</h2>
+          <p className="page-sub">{t('timesheet_extra.page_sub')}</p>
+        </div>
+        {!editingId && (
+          <button type="button" className={showManualForm ? 'btn-secondary' : 'btn-primary'} onClick={() => setShowManualForm(open => !open)}>
+            <i className={showManualForm ? 'fas fa-times' : 'fas fa-plus'} aria-hidden="true"></i>
+            {showManualForm ? t('timesheet_extra.manual_close') : t('timesheet_extra.manual_add')}
+          </button>
+        )}
+      </div>
+      {/* ─── FORM + CALENDAR (manual entry, opened on demand) ─── */}
+      {(showManualForm || editingId) && (
       <div className="card grid-2">
         <div className="form-section">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
@@ -413,8 +435,8 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
             <div className="form-group">
               <label>{t('employee.type')}</label>
               <div style={{ display: 'flex', gap: '15px' }}>
-                <label><input type="radio" checked={employeeType === 'parttime'} onChange={() => setEmployeeType('parttime')} /> PT</label>
-                <label><input type="radio" checked={employeeType === 'fulltime'} onChange={() => setEmployeeType('fulltime')} /> FT</label>
+                <label><input type="radio" checked={employeeType === 'parttime'} onChange={() => setEmployeeType('parttime')} /> {t('timesheet_extra.filter_parttime')}</label>
+                <label><input type="radio" checked={employeeType === 'fulltime'} onChange={() => setEmployeeType('fulltime')} /> {t('timesheet_extra.filter_fulltime')}</label>
               </div>
             </div>
             <div className="form-group">
@@ -535,9 +557,9 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
           {/* Mandatory edit reason */}
           {editingId && (
             <div className="form-group" style={{ marginTop: '10px' }}>
-              <label style={{ color: '#dc2626', fontWeight: '700' }}>
+              <label style={{ color: '#c0362a', fontWeight: '700' }}>
                 <i className="fas fa-exclamation-circle" style={{ marginRight: '5px' }}></i>
-                {t('timesheet_extra.edit_reason_label')} <span style={{ color: '#dc2626' }}>*</span>
+                {t('timesheet_extra.edit_reason_label')} <span style={{ color: '#c0362a' }}>*</span>
               </label>
               <textarea
                 rows={2}
@@ -546,13 +568,13 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
                 onChange={(e) => setEditReason(e.target.value)}
                 style={{
                   width: '100%', padding: '10px', borderRadius: '8px',
-                  border: editReason.trim() ? '1.5px solid #10b981' : '1.5px solid #dc2626',
+                  border: editReason.trim() ? '1.5px solid #2e9e6a' : '1.5px solid #c0362a',
                   resize: 'vertical', fontFamily: 'inherit', fontSize: '0.9rem',
                   background: '#fff8f8', outline: 'none',
                 }}
               />
               {!editReason.trim() && (
-                <span style={{ fontSize: '0.78rem', color: '#dc2626' }}>{t('timesheet_extra.edit_reason_required')}</span>
+                <span style={{ fontSize: '0.78rem', color: '#c0362a' }}>{t('timesheet_extra.edit_reason_required')}</span>
               )}
             </div>
           )}
@@ -567,7 +589,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
               {isSaving ? '...' : (editingId ? t('common.update') : t('common.save'))}
             </button>
             {editingId && (
-              <button style={{ padding: '12px 16px', background: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={resetForm}>
+              <button style={{ padding: '12px 16px', background: '#ece2d6', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={resetForm}>
                 {t('common.cancel')}
               </button>
             )}
@@ -579,7 +601,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
           {!employeeName.trim() ? (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px', textAlign: 'center' }}>
               <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.8' }}>
-                <i className="fas fa-calendar-alt" style={{ fontSize: '2rem', marginBottom: '10px', color: '#cbd5e1', display: 'block' }}></i>
+                <i className="fas fa-calendar-alt" style={{ fontSize: '2rem', marginBottom: '10px', color: '#dccdbe', display: 'block' }}></i>
                 {t('timesheet_extra.filter_employee')}
               </p>
             </div>
@@ -632,6 +654,9 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
           )}
         </div>
       </div>
+      )}
+
+      {!demoMode && <AttendanceSecurityPanel organizationId={organizationId} db={db} showToast={showToast} />}
 
       {/* ─── DAY DETAIL PANEL ─── */}
       {employeeName.trim() && selectedDate && (
@@ -662,12 +687,12 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
                         {record.employeeName} {renderRowTag(record)}
                       </td>
                       <td>{record.status === 'off' ? '—' : record.checkIn}</td>
-                      <td>{record.status === 'off' ? '—' : (record.checkOut || <span style={{ color: '#8b5cf6', fontWeight: '600' }}>{t('timesheet_extra.not_checked_out')}</span>)}</td>
+                      <td>{record.status === 'off' ? '—' : (record.checkOut || <span style={{ color: '#2f6f8f', fontWeight: '600' }}>{t('timesheet_extra.not_checked_out')}</span>)}</td>
                       <td>{record.status === 'off' ? '—' : `${(record.workHours || 0).toFixed(2)}h`}</td>
                       <td style={{ color: record.otHours > 0 ? 'var(--warning)' : 'inherit', fontWeight: record.otHours > 0 ? '600' : 'normal' }}>
                         {record.status === 'off' ? '—' : (record.otHours > 0 ? `${record.otHours}h` : '—')}
                       </td>
-                      <td style={{ color: record.lateHours > 0 ? '#dc2626' : 'inherit' }}>
+                      <td style={{ color: record.lateHours > 0 ? '#c0362a' : 'inherit' }}>
                         {record.status === 'off' ? '—' : (record.lateHours > 0 ? `${Number(record.lateHours).toFixed(2)}h` : '—')}
                       </td>
                       <td style={{ textAlign: 'center' }}>
@@ -696,9 +721,9 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
             onClick={exportToExcel}
             disabled={filteredAllRecords.length === 0}
             style={{
-              padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #16a34a',
-              background: filteredAllRecords.length === 0 ? '#f1f5f9' : '#f0fdf4',
-              color: filteredAllRecords.length === 0 ? '#94a3b8' : '#16a34a',
+              padding: '8px 16px', borderRadius: '8px', border: '1.5px solid #23854f',
+              background: filteredAllRecords.length === 0 ? '#f5eee6' : '#f0fdf4',
+              color: filteredAllRecords.length === 0 ? '#a39486' : '#23854f',
               fontWeight: '700', fontSize: '0.85rem', cursor: filteredAllRecords.length === 0 ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px',
             }}
@@ -711,12 +736,12 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
         {/* Stats row */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
           {[
-            { label: t('timesheet_extra.stat_total'),      value: monthStats.total,   bg: '#f1f5f9', color: '#334155' },
-            { label: t('timesheet_extra.stat_on_time'),    value: monthStats.work,    bg: '#dcfce7', color: '#166534' },
+            { label: t('timesheet_extra.stat_total'),      value: monthStats.total,   bg: '#f5eee6', color: '#4a3b32' },
+            { label: t('timesheet_extra.stat_on_time'),    value: monthStats.work,    bg: '#dcfce7', color: '#1f6b44' },
             { label: t('timesheet_extra.stat_late'),       value: monthStats.late,    bg: '#fef9c3', color: '#854d0e' },
             { label: t('timesheet_extra.stat_ot'),         value: monthStats.ot,      bg: '#ffedd5', color: '#9a3412' },
-            { label: t('timesheet_extra.stat_off'),        value: monthStats.off,     bg: '#fee2e2', color: '#991b1b' },
-            { label: t('timesheet_extra.stat_missing_co'), value: monthStats.missing, bg: '#ede9fe', color: '#5b21b6' },
+            { label: t('timesheet_extra.stat_off'),        value: monthStats.off,     bg: '#fee2e2', color: '#8a251c' },
+            { label: t('timesheet_extra.stat_missing_co'), value: monthStats.missing, bg: '#f6ece2', color: '#5b21b6' },
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, color: s.color, borderRadius: '8px', padding: '8px 14px', fontSize: '0.85rem', fontWeight: '700', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px' }}>
               <span style={{ fontSize: '1.3rem', fontWeight: '800' }}>{s.value}</span>
@@ -788,7 +813,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
         {/* Records table */}
         {filteredAllRecords.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            <i className="fas fa-search" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', color: '#cbd5e1' }}></i>
+            <i className="fas fa-search" style={{ fontSize: '2rem', marginBottom: '10px', display: 'block', color: '#dccdbe' }}></i>
             {t('timesheet_extra.no_records_found')}
           </div>
         ) : (
@@ -828,7 +853,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
                       {record.status === 'off' ? '—' : (
                         record.checkOut
                           ? record.checkOut
-                          : <span style={{ color: '#8b5cf6', fontWeight: '600', fontSize: '0.8rem' }}>{t('timesheet_extra.not_checked_out')}</span>
+                          : <span style={{ color: '#2f6f8f', fontWeight: '600', fontSize: '0.8rem' }}>{t('timesheet_extra.not_checked_out')}</span>
                       )}
                     </td>
                     <td style={{ fontWeight: '500' }}>
@@ -837,7 +862,7 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
                     <td style={{ color: record.otHours > 0 ? '#f97316' : 'inherit', fontWeight: record.otHours > 0 ? '700' : '400' }}>
                       {record.otHours > 0 ? `${record.otHours}h` : '—'}
                     </td>
-                    <td style={{ color: record.lateHours > 0 ? '#dc2626' : 'inherit', fontWeight: record.lateHours > 0 ? '700' : '400' }}>
+                    <td style={{ color: record.lateHours > 0 ? '#c0362a' : 'inherit', fontWeight: record.lateHours > 0 ? '700' : '400' }}>
                       {record.lateHours > 0 ? `${Number(record.lateHours).toFixed(2)}h` : '—'}
                     </td>
                     <td>{renderRowTag(record)}</td>

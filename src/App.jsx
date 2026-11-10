@@ -7,6 +7,8 @@ import { createDemoAdminSession } from './demo/demoAdmin';
 import { buildEmployeeDirectory } from './utils/employee';
 import { HISTORY_MONTHS, loadDatedDocuments, mergeById, monthStart } from './services/managerData';
 import PwaStatus from './components/PwaStatus';
+import AppShell from './components/brand/AppShell';
+import { BrandMark } from './components/brand/BrandLogo';
 import './App.css';
 
 const Auth = lazy(() => import('./components/Auth'));
@@ -19,6 +21,7 @@ const ScheduleTab = lazy(() => import('./components/manager/ScheduleTab'));
 const BusinessInsightsTab = lazy(() => import('./components/manager/BusinessInsightsTab'));
 const OrganizationSettingsTab = lazy(() => import('./components/manager/OrganizationSettingsTab'));
 const TrialBanner = lazy(() => import('./components/manager/TrialBanner'));
+const OnboardingChecklist = lazy(() => import('./components/manager/OnboardingChecklist'));
 const EmployeePortal = lazy(() => import('./components/employee/EmployeePortal'));
 
 // Tabs that stay on the mobile bottom bar; the rest live behind "More".
@@ -63,7 +66,6 @@ export default function App() {
   const [appliedBonuses, setAppliedBonuses] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [organization, setOrganization] = useState(null);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [authView, setAuthView] = useState(initialAuthView);
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -93,6 +95,7 @@ export default function App() {
     setAppliedBonuses(demo.bonuses);
     setSchedules(demo.schedules);
     setDemoSalesRecords(demo.salesRecords);
+    setOrganization(demo.organization);
     setActiveTab('dashboard');
   }, []);
 
@@ -235,36 +238,37 @@ export default function App() {
       setAppliedBonuses([]);
       setSchedules([]);
       setDemoSalesRecords([]);
+      setOrganization(null);
       return;
     }
     try { await signOut(auth); } catch { showToast(t('common.error'), 'danger'); }
   };
 
-  const getAvatarLetter = (email) => email ? email.charAt(0).toUpperCase() : 'A';
+  const loadingScreen = (
+    <div className="loading-screen">
+      <div className="loading-brand">
+        <BrandMark size={64} />
+        <div className="spinner" />
+      </div>
+    </div>
+  );
 
-  const toggleLanguage = () => {
-    const newLang = i18n.language === 'vi' ? 'en' : 'vi';
-    i18n.changeLanguage(newLang);
-  };
+  if (loading) return loadingScreen;
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
-  // Manager portal tabs
+  const isActive = currentUser && !authError && userProfile?.status === 'active';
+  const pendingCount = schedules.filter(s => s.status === 'pending').length;
   const managerTabs = [
-    { key: 'dashboard', icon: 'fas fa-tachometer-alt', label: t('nav.dashboard') },
-    { key: 'timesheet', icon: 'fas fa-calendar-check', label: t('nav.timesheet') },
-    { key: 'payroll', icon: 'fas fa-file-invoice-dollar', label: t('nav.payroll') },
+    { key: 'dashboard', icon: 'fas fa-mug-hot', label: t('nav.dashboard') },
+    { key: 'timesheet', icon: 'fas fa-user-clock', label: t('nav.timesheet') },
+    { key: 'schedule', icon: 'fas fa-calendar-week', label: t('nav.schedule'), badge: pendingCount },
+    { key: 'payroll', icon: 'fas fa-wallet', label: t('nav.payroll') },
     { key: 'employee', icon: 'fas fa-users', label: t('nav.employees') },
-    { key: 'schedule', icon: 'fas fa-calendar-alt', label: t('nav.schedule') },
     { key: 'insights', icon: 'fas fa-chart-line', label: t('nav.insights') },
-    { key: 'organization', icon: 'fas fa-building', label: t('nav.organization') },
+    { key: 'organization', icon: 'fas fa-store', label: t('nav.organization') },
   ].filter(tab => !demoMode || tab.key !== 'organization');
 
-  const pendingCount = schedules.filter(s => s.status === 'pending').length;
-  const primaryTabs = managerTabs.filter(tab => MOBILE_PRIMARY_TABS.includes(tab.key));
-  const secondaryTabs = managerTabs.filter(tab => !MOBILE_PRIMARY_TABS.includes(tab.key));
-
   return (
-    <Suspense fallback={<div className="loading-screen"><div className="spinner" /></div>}>
+    <Suspense fallback={loadingScreen}>
     <>
       {/* Auth screen — shown when not logged in */}
       {!currentUser && !authView && (
@@ -284,13 +288,14 @@ export default function App() {
 
       {currentUser && authError && (
         <div className="loading-screen" style={{ flexDirection: 'column', gap: '16px', padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: '#dc2626', fontWeight: 700 }}>{t(authError)}</p>
+          <BrandMark size={56} />
+          <p style={{ color: 'var(--danger)', fontWeight: 700, maxWidth: '420px' }}>{t(authError)}</p>
           <button className="btn-primary" onClick={handleLogout}>{t('nav.logout')}</button>
         </div>
       )}
 
       {/* Employee portal */}
-      {currentUser && !authError && userProfile?.status === 'active' && userProfile?.role === 'employee' && (
+      {isActive && userProfile?.role === 'employee' && (
         <EmployeePortal
           currentUser={currentUser}
           empProfile={empProfile}
@@ -299,71 +304,33 @@ export default function App() {
       )}
 
       {/* Manager portal */}
-      {currentUser && !authError && userProfile?.status === 'active' && userProfile?.role === 'manager' && (
-      <div className="app-container">
-      <header className="app-header no-print">
-        <div className="header-container">
-          <div className="header-brand">
-            <img src="/wea-hr-icon.svg" alt="WeaHR" style={{ width: '38px', height: '38px', borderRadius: '10px', flexShrink: 0 }} />
-            <h1>WeaHR</h1>
-          </div>
-
-          <nav className="desktop-nav desktop-only">
-            {managerTabs.map(tab => (
-              <button
-                key={tab.key}
-                className={`nav-item ${activeTab === tab.key ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.key)}
-                style={{ position: 'relative' }}
-              >
-                <i className={tab.icon}></i> {tab.label}
-                {tab.key === 'schedule' && pendingCount > 0 && (
-                  <span style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: 'white', borderRadius: '10px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: '700', lineHeight: 1.4 }}>{pendingCount}</span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div className="header-actions desktop-only">
-            <button className="action-btn" onClick={toggleLanguage} title={t('nav.change_language')}>
-              <i className="fas fa-globe"></i> <span>{i18n.language === 'vi' ? 'EN' : 'VI'}</span>
-            </button>
-            <div className="user-profile">
-              <div className="avatar">{getAvatarLetter(currentUser.email)}</div>
-              <div className="user-info-text">
-                <span className="user-role">{t('nav.role_manager')}</span>
-                <span className="user-email">{currentUser.email}</span>
-              </div>
+      {isActive && userProfile?.role === 'manager' && (
+        <AppShell
+          navItems={managerTabs}
+          activeTab={activeTab}
+          onNavigate={setActiveTab}
+          primaryKeys={MOBILE_PRIMARY_TABS}
+          shopName={organization?.name}
+          userName={userProfile.fullName || currentUser.email}
+          roleLabel={t('nav.role_manager')}
+          onLogout={handleLogout}
+        >
+          {demoMode && (
+            <div className="notice-banner" role="status">
+              <i className="fas fa-flask" aria-hidden="true"></i> {t('app.demo_banner')}
             </div>
-            <button className="logout-btn" onClick={handleLogout} title={t('nav.logout')}>
-              <i className="fas fa-sign-out-alt"></i>
-            </button>
-          </div>
-
-          {/* Mobile: compact header — language + avatar + logout */}
-          <div className="mobile-only" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button className="action-btn" onClick={toggleLanguage} style={{ padding: '6px 10px', fontSize: '0.8rem' }}>
-              <i className="fas fa-globe"></i> {i18n.language === 'vi' ? 'EN' : 'VI'}
-            </button>
-            <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '0.85rem', flexShrink: 0, cursor: 'default' }}>
-              {getAvatarLetter(currentUser.email)}
-            </div>
-            <button className="logout-btn" onClick={handleLogout} title={t('nav.logout')}>
-              <i className="fas fa-sign-out-alt"></i>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="app-main">
-        {demoMode && (
-          <div style={{ maxWidth: '1200px', margin: '0 auto 16px', padding: '12px 18px', borderRadius: '12px', background: '#eef2ff', color: '#3730a3', fontWeight: 700 }}>
-            {t('app.demo_banner')}
-          </div>
-        )}
-        {!demoMode && <TrialBanner organization={organization} />}
-        {activeTab === 'dashboard' && (
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+          )}
+          {!demoMode && <TrialBanner organization={organization} />}
+          {!demoMode && activeTab === 'dashboard' && (
+            <OnboardingChecklist
+              db={db}
+              organizationId={userProfile.organizationId}
+              records={records}
+              savedEmployees={savedEmployees}
+              onNavigate={setActiveTab}
+            />
+          )}
+          {activeTab === 'dashboard' && (
             <DashboardTab
               records={records}
               savedEmployees={savedEmployees}
@@ -371,138 +338,92 @@ export default function App() {
               appliedPenalties={appliedPenalties}
               appliedBonuses={appliedBonuses}
               formatMoney={formatMoney}
+              shopName={organization?.name}
+              userName={userProfile.fullName}
+              onNavigate={setActiveTab}
             />
-          </div>
-        )}
-        {activeTab === 'timesheet' && (
-          <TimesheetTab
-            ensureMonthLoaded={ensureMonthLoaded}
-            records={records} setRecords={setRecords}
-            savedEmployees={savedEmployees} setSavedEmployees={setSavedEmployees}
-            organizationId={userProfile.organizationId}
-            demoMode={demoMode}
-            db={db} showToast={showToast} showConfirm={showConfirm}
-          />
-        )}
-        {activeTab === 'payroll' && (
-          <PayrollTab
-            ensureMonthLoaded={ensureMonthLoaded}
-            records={records} savedEmployees={savedEmployees}
-            appliedPenalties={appliedPenalties} setAppliedPenalties={setAppliedPenalties}
-            appliedBonuses={appliedBonuses} setAppliedBonuses={setAppliedBonuses}
-            organizationId={userProfile.organizationId}
-            demoMode={demoMode}
-            formatMoney={formatMoney} db={db} showToast={showToast} showConfirm={showConfirm}
-          />
-        )}
-        {activeTab === 'employee' && (
-          <EmployeeTab
-            savedEmployees={savedEmployees} setSavedEmployees={setSavedEmployees}
-            records={records} setRecords={setRecords}
-            appliedPenalties={appliedPenalties} setAppliedPenalties={setAppliedPenalties}
-            organizationId={userProfile.organizationId}
-            demoMode={demoMode}
-            formatMoney={formatMoney} handleMoneyInput={handleMoneyInput} db={db} showToast={showToast} showConfirm={showConfirm}
-          />
-        )}
-        {activeTab === 'schedule' && (
-          <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
-            <ScheduleTab
-              schedules={schedules} setSchedules={setSchedules}
-              organizationId={userProfile.organizationId} db={db} showToast={showToast}
-              currentUser={currentUser}
+          )}
+          {activeTab === 'timesheet' && (
+            <TimesheetTab
+              ensureMonthLoaded={ensureMonthLoaded}
+              records={records} setRecords={setRecords}
+              savedEmployees={savedEmployees} setSavedEmployees={setSavedEmployees}
+              organizationId={userProfile.organizationId}
               demoMode={demoMode}
+              db={db} showToast={showToast} showConfirm={showConfirm}
             />
-          </div>
-        )}
-        {activeTab === 'insights' && (
-          <BusinessInsightsTab
-            ensureMonthLoaded={ensureMonthLoaded}
-            db={db}
-            organizationId={userProfile.organizationId}
-            records={records}
-            savedEmployees={savedEmployees}
-            schedules={schedules}
-            demoMode={demoMode}
-            demoSalesRecords={demoSalesRecords}
-            showToast={showToast}
-          />
-        )}
-        {activeTab === 'organization' && (
-          <OrganizationSettingsTab
-            db={db}
-            organizationId={userProfile.organizationId}
-            userProfile={userProfile}
-            showToast={showToast}
-          />
-        )}
-      </div>
-
-      <footer className="app-footer no-print">
-        &copy; {new Date().getFullYear()} WeaHR. {t('nav.all_rights')}.
-        <br />
-        <span style={{ fontSize: '0.85rem', marginTop: '8px', display: 'inline-block' }}>Version 2.0.0 · {t('nav.powered_by')}</span>
-      </footer>
-
-      </div>
-      )} {/* end manager portal */}
-
-      {/* Bottom Navigation — mobile, manager portal: 4 primary tabs + "More" */}
-      {currentUser && !authError && userProfile?.status === 'active' && userProfile?.role === 'manager' && (
-        <>
-          {moreMenuOpen && (
-            <div className="more-sheet-overlay no-print" onClick={() => setMoreMenuOpen(false)}>
-              <div className="more-sheet" role="menu" aria-label={t('nav.more')} onClick={event => event.stopPropagation()}>
-                {secondaryTabs.map(tab => (
-                  <button
-                    key={tab.key}
-                    role="menuitem"
-                    className={`more-sheet-item ${activeTab === tab.key ? 'active' : ''}`}
-                    onClick={() => { setActiveTab(tab.key); setMoreMenuOpen(false); }}
-                  >
-                    <i className={tab.icon}></i>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+          )}
+          {activeTab === 'payroll' && (
+            <div className="page-head" style={{ maxWidth: '1200px', margin: '0 auto 22px' }}>
+              <div>
+                <h2 className="page-title">{t('nav.payroll')}</h2>
+                <p className="page-sub">{t('payroll.page_sub')}</p>
               </div>
             </div>
           )}
-          <nav className="bottom-nav no-print">
-            {primaryTabs.map(tab => (
-              <button
-                key={tab.key}
-                className={`bottom-nav-item ${activeTab === tab.key ? 'active' : ''}`}
-                onClick={() => { setActiveTab(tab.key); setMoreMenuOpen(false); }}
-              >
-                {tab.key === 'schedule' && pendingCount > 0 && (
-                  <span className="bottom-nav-badge">{pendingCount > 9 ? '9+' : pendingCount}</span>
-                )}
-                <i className={tab.icon}></i>
-                <span>{tab.label}</span>
-              </button>
-            ))}
-            {secondaryTabs.length > 0 && (
-              <button
-                className={`bottom-nav-item ${moreMenuOpen || secondaryTabs.some(tab => tab.key === activeTab) ? 'active' : ''}`}
-                aria-expanded={moreMenuOpen}
-                onClick={() => setMoreMenuOpen(open => !open)}
-              >
-                <i className="fas fa-ellipsis-h"></i>
-                <span>{t('nav.more')}</span>
-              </button>
-            )}
-          </nav>
-        </>
+          {activeTab === 'payroll' && (
+            <PayrollTab
+              ensureMonthLoaded={ensureMonthLoaded}
+              records={records} savedEmployees={savedEmployees}
+              appliedPenalties={appliedPenalties} setAppliedPenalties={setAppliedPenalties}
+              appliedBonuses={appliedBonuses} setAppliedBonuses={setAppliedBonuses}
+              organizationId={userProfile.organizationId}
+              demoMode={demoMode}
+              formatMoney={formatMoney} db={db} showToast={showToast} showConfirm={showConfirm}
+            />
+          )}
+          {activeTab === 'employee' && (
+            <EmployeeTab
+              savedEmployees={savedEmployees} setSavedEmployees={setSavedEmployees}
+              records={records} setRecords={setRecords}
+              appliedPenalties={appliedPenalties} setAppliedPenalties={setAppliedPenalties}
+              organizationId={userProfile.organizationId}
+              demoMode={demoMode}
+              formatMoney={formatMoney} handleMoneyInput={handleMoneyInput} db={db} showToast={showToast} showConfirm={showConfirm}
+            />
+          )}
+          {activeTab === 'schedule' && (
+            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+              <ScheduleTab
+                schedules={schedules} setSchedules={setSchedules}
+                organizationId={userProfile.organizationId} db={db} showToast={showToast}
+                currentUser={currentUser}
+                demoMode={demoMode}
+              />
+            </div>
+          )}
+          {activeTab === 'insights' && (
+            <BusinessInsightsTab
+              ensureMonthLoaded={ensureMonthLoaded}
+              db={db}
+              organizationId={userProfile.organizationId}
+              records={records}
+              savedEmployees={savedEmployees}
+              schedules={schedules}
+              demoMode={demoMode}
+              demoSalesRecords={demoSalesRecords}
+              showToast={showToast}
+            />
+          )}
+          {activeTab === 'organization' && (
+            <OrganizationSettingsTab
+              db={db}
+              organizationId={userProfile.organizationId}
+              userProfile={userProfile}
+              showToast={showToast}
+            />
+          )}
+        </AppShell>
       )}
 
       {/* Toast — always rendered so it works on login screen too */}
-      <div className={`toast-notification ${toast.type} ${toast.show ? 'show' : ''}`}>{toast.message}</div>
+      <div role="status" aria-live="polite" className={`toast-notification ${toast.type} ${toast.show ? 'show' : ''}`}>{toast.message}</div>
       <PwaStatus />
 
       {confirmDialog.show && (
         <div className="modal-overlay">
-          <div className="confirm-modal">
-            <h3><i className="fas fa-exclamation-triangle"></i> {t('common.warning')}</h3>
+          <div className="confirm-modal" role="alertdialog" aria-modal="true">
+            <h3><i className="fas fa-exclamation-triangle" aria-hidden="true"></i> {t('common.warning')}</h3>
             <p>{confirmDialog.message}</p>
             <div className="modal-actions">
               <button className="btn-cancel" onClick={handleCancelAction}>{t('common.cancel')}</button>

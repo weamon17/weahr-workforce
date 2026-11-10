@@ -11,9 +11,9 @@ const formatDate = (value, locale) => {
 };
 
 const statusMeta = {
-  pending: { labelKey: 'org.status_pending', color: '#d97706', background: '#fffbeb' },
-  accepted: { labelKey: 'org.status_accepted', color: '#059669', background: '#ecfdf5' },
-  revoked: { labelKey: 'org.status_revoked', color: '#64748b', background: '#f1f5f9' },
+  pending: { labelKey: 'org.status_pending', color: '#b9790f', background: '#fffbeb' },
+  accepted: { labelKey: 'org.status_accepted', color: '#23854f', background: '#ecfdf5' },
+  revoked: { labelKey: 'org.status_revoked', color: '#75665b', background: '#f5eee6' },
 };
 
 export default function OrganizationSettingsTab({ db, organizationId, userProfile, showToast }) {
@@ -102,34 +102,34 @@ export default function OrganizationSettingsTab({ db, organizationId, userProfil
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px' }}>
       <div className="section-header" style={{ marginBottom: '22px' }}>
         <div>
-          <p style={{ margin: '0 0 6px', color: '#4f46e5', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.08em' }}>SAAS WORKSPACE</p>
+          <p style={{ margin: '0 0 6px', color: '#6b3a1f', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.08em' }}>SAAS WORKSPACE</p>
           <h2 style={{ margin: 0 }}>{t('org.title')}</h2>
-          <p style={{ color: '#64748b', margin: '8px 0 0' }}>{t('org.subtitle')}</p>
+          <p style={{ color: '#75665b', margin: '8px 0 0' }}>{t('org.subtitle')}</p>
         </div>
       </div>
 
       <div className="grid-3" style={{ marginBottom: '22px' }}>
         <div className="card">
-          <div style={{ color: '#64748b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.business')}</div>
+          <div style={{ color: '#75665b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.business')}</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px' }}>{organization?.name || organizationId}</div>
-          <div style={{ color: '#64748b', marginTop: '6px', fontSize: '0.86rem' }}>{t('org.owner', { name: userProfile?.fullName || userProfile?.email })}</div>
+          <div style={{ color: '#75665b', marginTop: '6px', fontSize: '0.86rem' }}>{t('org.owner', { name: userProfile?.fullName || userProfile?.email })}</div>
         </div>
         <div className="card">
-          <div style={{ color: '#64748b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.current_plan')}</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px', color: '#4f46e5' }}>{organization?.plan === 'trial' ? t('org.plan_trial') : organization?.plan || t('org.plan_unset')}</div>
-          <div style={{ color: '#64748b', marginTop: '6px', fontSize: '0.86rem' }}>{trialDaysLeft === null ? t('org.no_end_date') : t('org.days_left', { count: trialDaysLeft })}</div>
+          <div style={{ color: '#75665b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.current_plan')}</div>
+          <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px', color: '#6b3a1f' }}>{organization?.plan === 'trial' ? t('org.plan_trial') : organization?.plan || t('org.plan_unset')}</div>
+          <div style={{ color: '#75665b', marginTop: '6px', fontSize: '0.86rem' }}>{trialDaysLeft === null ? t('org.no_end_date') : t('org.days_left', { count: trialDaysLeft })}</div>
         </div>
         <div className="card">
-          <div style={{ color: '#64748b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.pilot_limits')}</div>
+          <div style={{ color: '#75665b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.pilot_limits')}</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px' }}>{t('org.limit_employees', { count: organization?.limits?.employees || 30 })}</div>
-          <div style={{ color: '#64748b', marginTop: '6px', fontSize: '0.86rem' }}>{t('org.limit_branches_managers', { branches: organization?.limits?.branches || 2, managers: organization?.limits?.managers || 3 })}</div>
+          <div style={{ color: '#75665b', marginTop: '6px', fontSize: '0.86rem' }}>{t('org.limit_branches_managers', { branches: organization?.limits?.branches || 2, managers: organization?.limits?.managers || 3 })}</div>
         </div>
       </div>
 
       <div className="grid-2" style={{ alignItems: 'start' }}>
         <div className="card">
-          <h3 style={{ marginTop: 0 }}><i className="fas fa-user-plus" style={{ color: '#4f46e5', marginRight: '8px' }} />{t('org.invite_title')}</h3>
-          <p style={{ color: '#64748b', lineHeight: 1.55 }}>{t('org.invite_help')}</p>
+          <h3 style={{ marginTop: 0 }}><i className="fas fa-user-plus" style={{ color: '#6b3a1f', marginRight: '8px' }} />{t('org.invite_title')}</h3>
+          <p style={{ color: '#75665b', lineHeight: 1.55 }}>{t('org.invite_help')}</p>
           <form onSubmit={createInvitation}>
             <div className="form-group">
               <label>{t('org.field_full_name')}</label>
@@ -145,8 +145,8 @@ export default function OrganizationSettingsTab({ db, organizationId, userProfil
           </form>
 
           {createdLink && (
-            <div style={{ marginTop: '18px', padding: '14px', borderRadius: '12px', background: '#eef2ff', border: '1px solid #c7d2fe' }}>
-              <div style={{ fontWeight: 800, color: '#3730a3', marginBottom: '8px' }}>{t('org.new_link')}</div>
+            <div style={{ marginTop: '18px', padding: '14px', borderRadius: '12px', background: '#f6ece2', border: '1px solid #e8d3bf' }}>
+              <div style={{ fontWeight: 800, color: '#552d17', marginBottom: '8px' }}>{t('org.new_link')}</div>
               <input readOnly value={createdLink} onFocus={event => event.target.select()} style={{ width: '100%', fontSize: '0.8rem' }} />
               <button type="button" className="btn-secondary" onClick={copyLink} style={{ width: '100%', marginTop: '8px' }}>
                 <i className="fas fa-copy" /> {t('org.copy_link')}
@@ -161,26 +161,26 @@ export default function OrganizationSettingsTab({ db, organizationId, userProfil
             <button type="button" className="btn-secondary" onClick={loadData} style={{ padding: '8px 10px' }}><i className="fas fa-sync-alt" /></button>
           </div>
           {invitations.length === 0 ? (
-            <p style={{ color: '#64748b' }}>{t('org.no_invitations')}</p>
+            <p style={{ color: '#75665b' }}>{t('org.no_invitations')}</p>
           ) : (
             <div style={{ display: 'grid', gap: '10px' }}>
               {invitations.map(invitation => {
                 const meta = statusMeta[invitation.status] || statusMeta.revoked;
                 const expired = invitation.status === 'pending' && invitation.expiresAt?.toMillis?.() <= Date.now();
                 return (
-                  <div key={invitation.id} style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                  <div key={invitation.id} style={{ padding: '12px', border: '1px solid #ece2d6', borderRadius: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'start' }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis' }}>{invitation.fullName || invitation.email}</div>
-                        <div style={{ color: '#64748b', fontSize: '0.84rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invitation.email}</div>
+                        <div style={{ color: '#75665b', fontSize: '0.84rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invitation.email}</div>
                       </div>
-                      <span style={{ color: expired ? '#dc2626' : meta.color, background: expired ? '#fef2f2' : meta.background, borderRadius: '999px', padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                      <span style={{ color: expired ? '#c0362a' : meta.color, background: expired ? '#fef2f2' : meta.background, borderRadius: '999px', padding: '4px 8px', fontSize: '0.72rem', fontWeight: 800, whiteSpace: 'nowrap' }}>
                         {expired ? t('org.expired') : t(meta.labelKey)}
                       </span>
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '0.76rem', marginTop: '8px' }}>{t('org.expires_at', { date: formatDate(invitation.expiresAt, locale) })}</div>
+                    <div style={{ color: '#a39486', fontSize: '0.76rem', marginTop: '8px' }}>{t('org.expires_at', { date: formatDate(invitation.expiresAt, locale) })}</div>
                     {invitation.status === 'pending' && !expired && (
-                      <button type="button" className="auth-link" onClick={() => revokeInvitation(invitation.id)} style={{ color: '#dc2626', paddingBottom: 0, fontSize: '0.8rem' }}>{t('org.revoke')}</button>
+                      <button type="button" className="auth-link" onClick={() => revokeInvitation(invitation.id)} style={{ color: '#c0362a', paddingBottom: 0, fontSize: '0.8rem' }}>{t('org.revoke')}</button>
                     )}
                   </div>
                 );

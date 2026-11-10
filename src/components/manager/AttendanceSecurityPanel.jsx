@@ -144,7 +144,7 @@ export default function AttendanceSecurityPanel({ organizationId, db, showToast 
           <h2 style={{ margin: 0 }}>{t('attendance.title')}</h2>
           <p style={{ color: 'var(--text-muted)', margin: '6px 0 0' }}>{t('attendance.subtitle')}</p>
         </div>
-        <span style={{ background: '#dcfce7', color: '#15803d', padding: '7px 11px', borderRadius: '999px', fontWeight: 700 }}>Server verified</span>
+        <span style={{ background: '#dcfce7', color: '#1f6b44', padding: '7px 11px', borderRadius: '999px', fontWeight: 700 }}>Server verified</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)', gap: '22px', marginTop: '20px' }}>
@@ -166,24 +166,24 @@ export default function AttendanceSecurityPanel({ organizationId, db, showToast 
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', background: '#f8fafc', borderRadius: '14px', padding: '16px' }}>
+        <div style={{ textAlign: 'center', background: '#faf6f1', borderRadius: '14px', padding: '16px' }}>
           <h3 style={{ margin: '0 0 8px' }}>{t('attendance.qr_title')}</h3>
           {qrImage
             ? <img src={qrImage} alt={t('attendance.qr_alt')} style={{ width: 'min(100%, 260px)', borderRadius: '10px' }} />
             : (
-              <div style={{ padding: '55px 20px', color: qrError ? '#b91c1c' : '#64748b' }}>
+              <div style={{ padding: '55px 20px', color: qrError ? '#9a2a20' : '#75665b' }}>
                 {qrError || t('attendance.qr_needs_location')}
               </div>
             )}
-          <p style={{ margin: '6px 0', fontWeight: 700, color: secondsLeft <= 10 ? '#dc2626' : '#334155' }}>{t('attendance.qr_rotates_in', { seconds: secondsLeft })}</p>
+          <p style={{ margin: '6px 0', fontWeight: 700, color: secondsLeft <= 10 ? '#c0362a' : '#4a3b32' }}>{t('attendance.qr_rotates_in', { seconds: secondsLeft })}</p>
           <button className="btn-secondary" onClick={refreshQr}>{t('attendance.qr_refresh')}</button>
         </div>
       </div>
 
       <div style={{ marginTop: '22px' }}>
         <h3>{t('attendance.exceptions_title', { count: exceptions.length })}</h3>
-        {exceptions.length === 0 ? <p style={{ color: '#64748b' }}>{t('attendance.no_exceptions')}</p> : exceptions.map(item => (
-          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', borderTop: '1px solid #e2e8f0', padding: '12px 0', flexWrap: 'wrap' }}>
+        {exceptions.length === 0 ? <p style={{ color: '#75665b' }}>{t('attendance.no_exceptions')}</p> : exceptions.map(item => (
+          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', borderTop: '1px solid #ece2d6', padding: '12px 0', flexWrap: 'wrap' }}>
             <div>
               <b>{item.employeeName}</b> · {item.action === 'check_in' ? 'Check-in' : 'Check-out'} {t('attendance.attempt_at', { time: item.attemptedTime })}
               <div style={{ color: '#b45309', fontSize: '.88rem' }}>{t(`attendance.reason_${item.reason}`, { defaultValue: item.reason })}{item.distance != null ? t('attendance.distance_away', { meters: item.distance }) : ''}</div>

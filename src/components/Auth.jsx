@@ -9,6 +9,7 @@ import { httpsCallable } from 'firebase/functions';
 import { useTranslation } from 'react-i18next';
 import { auth, functions } from '../firebase';
 import { requestPasswordResetEmail, sendVerificationEmail } from '../services/authEmail';
+import { BrandLogo } from './brand/BrandLogo';
 
 const blankForm = {
   organizationName: '',
@@ -249,18 +250,16 @@ export default function Auth({ onLogin, onDemoLogin, showToast, initialView = 'l
     <div className="auth-page-wrapper">
       <div className="auth-glass-container">
         <div className="auth-branding">
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
-            <i className="fas fa-layer-group" /> WeaHR
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '1.05rem', lineHeight: '1.6' }}>
-            {t('authui.tagline')}
-          </p>
-          <div className="auth-value-list">
-            <span><i className="fas fa-check-circle" /> {t('authui.value_trial')}</span>
-            <span><i className="fas fa-check-circle" /> {t('authui.value_card')}</span>
-            <span><i className="fas fa-check-circle" /> {t('authui.value_isolated')}</span>
+          <BrandLogo size={48} tone="light" tagline={t('brand.tagline')} />
+          <div>
+            <p className="auth-branding-headline">{t('landing.title')}</p>
+            <p className="auth-branding-lead">{t('authui.tagline')}</p>
           </div>
-
+          <div className="auth-value-list">
+            <span><i className="fas fa-check-circle" aria-hidden="true" /> {t('authui.value_trial')}</span>
+            <span><i className="fas fa-check-circle" aria-hidden="true" /> {t('authui.value_card')}</span>
+            <span><i className="fas fa-check-circle" aria-hidden="true" /> {t('authui.value_isolated')}</span>
+          </div>
         </div>
 
         <div className="auth-form-section">
@@ -286,7 +285,7 @@ export default function Auth({ onLogin, onDemoLogin, showToast, initialView = 'l
               </p>
               <p className="auth-helper">{t('authui.employee_invite_only')}</p>
               {demoEmail && (
-                <p className="auth-helper" style={{ color: '#a5b4fc' }}>
+                <p className="auth-helper" style={{ color: 'var(--espresso-500)' }}>
                   Demo local: <b>{demoEmail}</b> · {t('authui.demo_hint')}
                 </p>
               )}

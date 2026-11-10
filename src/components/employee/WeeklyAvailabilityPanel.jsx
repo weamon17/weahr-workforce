@@ -134,7 +134,7 @@ export default function WeeklyAvailabilityPanel({ currentUser, empProfile, db, s
 
   if (loading) return <div className="card">{t('availability.loading')}</div>;
   if (!settings) return (
-    <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
+    <div className="card" style={{ borderLeft: '4px solid #e0a11b' }}>
       {t('availability.not_configured')}
     </div>
   );
@@ -156,7 +156,7 @@ export default function WeeklyAvailabilityPanel({ currentUser, empProfile, db, s
         </span>
       </div>
 
-      <div style={{ margin: '16px 0', padding: '12px 14px', borderRadius: '10px', background: deadlinePassed ? '#fee2e2' : '#fffbeb', color: deadlinePassed ? '#991b1b' : '#92400e' }}>
+      <div style={{ margin: '16px 0', padding: '12px 14px', borderRadius: '10px', background: deadlinePassed ? '#fee2e2' : '#fffbeb', color: deadlinePassed ? '#8a251c' : '#92400e' }}>
         <strong>{deadlinePassed ? t('availability.deadline_passed') : t('availability.reminder')}</strong>{' '}
         {t('availability.auto_after_deadline', { deadline: deadline?.toLocaleString(locale) })}
       </div>

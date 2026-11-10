@@ -129,25 +129,25 @@ export default function SecureAttendanceButton({ action, scheduleId, disabled, l
     <>
       <button onClick={() => setOpen(true)} disabled={disabled || busy} style={{
         padding: '20px', borderRadius: '16px', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-        background: disabled ? '#e2e8f0' : isCheckIn ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #4f46e5, #3730a3)',
-        color: disabled ? '#94a3b8' : 'white', fontSize: '1.05rem', fontWeight: 700,
-        boxShadow: disabled ? 'none' : `0 4px 15px ${isCheckIn ? 'rgba(16,185,129,.3)' : 'rgba(79,70,229,.3)'}`,
+        background: disabled ? '#ece2d6' : isCheckIn ? 'linear-gradient(135deg, #2e9e6a, #23854f)' : 'linear-gradient(135deg, #6b3a1f, #552d17)',
+        color: disabled ? '#a39486' : 'white', fontSize: '1.05rem', fontWeight: 700,
+        boxShadow: disabled ? 'none' : `0 4px 15px ${isCheckIn ? 'rgba(16,185,129,.3)' : 'rgba(107, 58, 31,.3)'}`,
       }}>
         <i className="fas fa-qrcode" style={{ marginRight: '10px' }} />{disabled && completedLabel ? completedLabel : label}
       </button>
 
       {open && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,.8)', display: 'grid', placeItems: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(43, 26, 18,.8)', display: 'grid', placeItems: 'center', padding: '20px' }}>
           <div style={{ width: 'min(460px, 100%)', background: 'white', borderRadius: '18px', padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0 }}>{t('checkin.scanner_title')}</h3>
               <button className="btn-secondary" onClick={closeScanner}>{t('checkin.close')}</button>
             </div>
-            <video ref={videoRef} muted playsInline style={{ width: '100%', minHeight: '220px', background: '#0f172a', borderRadius: '12px', marginTop: '14px', objectFit: 'cover' }} />
-            <p style={{ color: cameraError ? '#b45309' : '#64748b', fontSize: '.88rem' }}>{cameraError || t('checkin.scanner_help')}</p>
+            <video ref={videoRef} muted playsInline style={{ width: '100%', minHeight: '220px', background: '#2b1a12', borderRadius: '12px', marginTop: '14px', objectFit: 'cover' }} />
+            <p style={{ color: cameraError ? '#b45309' : '#75665b', fontSize: '.88rem' }}>{cameraError || t('checkin.scanner_help')}</p>
             <details>
-              <summary style={{ cursor: 'pointer', color: '#475569' }}>{t('checkin.manual_toggle')}</summary>
-              <textarea value={manualValue} onChange={event => setManualValue(event.target.value)} rows="3" placeholder={t('checkin.manual_placeholder')} style={{ width: '100%', marginTop: '9px', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <summary style={{ cursor: 'pointer', color: '#5c4c41' }}>{t('checkin.manual_toggle')}</summary>
+              <textarea value={manualValue} onChange={event => setManualValue(event.target.value)} rows="3" placeholder={t('checkin.manual_placeholder')} style={{ width: '100%', marginTop: '9px', padding: '9px', borderRadius: '8px', border: '1px solid #dccdbe' }} />
               <button className="btn-primary" disabled={busy || !manualValue.trim()} onClick={() => execute(manualValue)} style={{ width: '100%', marginTop: '8px' }}>{busy ? t('checkin.verifying') : t('checkin.verify')}</button>
             </details>
           </div>
