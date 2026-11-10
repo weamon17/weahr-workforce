@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { config } from './config.js';
 import { createAttendanceRouter } from './attendanceRoutes.js';
 import { createBillingRouter } from './billingRoutes.js';
+import { createTimesheetRouter } from './timesheetRoutes.js';
 
 const normalizeEmail = value => String(value || '').trim().toLowerCase().slice(0, 254);
 const safeId = value => value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 1200);
@@ -178,6 +179,7 @@ export const createApp = ({ auth, firestore, sendMail, billing = config.billing 
 
   app.use('/v1/attendance', createAttendanceRouter({ auth, firestore }));
   app.use('/v1/billing', createBillingRouter({ auth, firestore, billing }));
+  app.use('/v1/timesheets', createTimesheetRouter({ auth, firestore }));
 
   app.use((_request, response) => errorResponse(response, 404, 'not-found', 'Không tìm thấy API.'));
   return app;

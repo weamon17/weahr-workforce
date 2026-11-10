@@ -165,11 +165,19 @@ describe('shift swaps', () => {
 });
 
 describe('audit logs', () => {
-  test('managers can add audit entries but nobody can delete or edit them', async () => {
-    await assertSucceeds(setDoc(doc(db('managerA'), 'audit_logs', 'log-2'), { organizationId: ORG_A, action: 'edit' }));
+  test('managers read their audit trail but cannot write, edit or delete it', async () => {
+    await assertSucceeds(getDoc(doc(db('managerA'), 'audit_logs', 'log-1')));
+    await assertFails(setDoc(doc(db('managerA'), 'audit_logs', 'log-2'), { organizationId: ORG_A, action: 'edit' }));
     await assertFails(deleteDoc(doc(db('managerA'), 'audit_logs', 'log-1')));
     await assertFails(updateDoc(doc(db('managerA'), 'audit_logs', 'log-1'), { action: 'hidden' }));
     await assertFails(getDoc(doc(db('employeeA1'), 'audit_logs', 'log-1')));
+  });
+
+  test('managers cannot change attendance without going through the logged backend', async () => {
+    await assertSucceeds(getDoc(doc(db('managerA'), 'timesheets', 'ts-a')));
+    await assertFails(updateDoc(doc(db('managerA'), 'timesheets', 'ts-a'), { checkIn: '07:00' }));
+    await assertFails(deleteDoc(doc(db('managerA'), 'timesheets', 'ts-a')));
+    await assertFails(setDoc(doc(db('managerA'), 'timesheets', 'ts-new'), { organizationId: ORG_A, employeeName: 'An', date: '2026-09-26' }));
   });
 });
 

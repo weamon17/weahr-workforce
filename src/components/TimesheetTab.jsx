@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { collection, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { calculateHours, calculateLateHours, calculateOvertimeHours, localDateString } from '../utils/time';
+import AttendanceSecurityPanel from './manager/AttendanceSecurityPanel';
+import AuditLogPanel from './manager/AuditLogPanel';
+import { buildEmployeeDocumentId } from '../utils/employee';
+import { downloadCsv } from '../utils/csv';
+import { createTimesheet, deleteTimesheet, updateTimesheet } from '../services/timesheetApi';
 
 // An open record from an earlier day means the employee forgot to check out;
 // today's open record simply means they are still on shift.
 const isForgottenCheckout = (record, today) => record.status === 'work' && !record.checkOut && record.date < today;
 const isStillWorking = (record, today) => record.status === 'work' && !record.checkOut && record.date >= today;
-import AttendanceSecurityPanel from './manager/AttendanceSecurityPanel';
-import { buildEmployeeDocumentId } from '../utils/employee';
-import { downloadCsv } from '../utils/csv';
 
 export default function TimesheetTab({ records, setRecords, savedEmployees, setSavedEmployees, organizationId, demoMode = false, db, showToast, showConfirm, ensureMonthLoaded }) {
   const { t, i18n } = useTranslation();
@@ -33,6 +35,9 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
   const [editingId, setEditingId] = useState(null);
   const [showManualForm, setShowManualForm] = useState(false);
   const [editReason, setEditReason] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [employeeName, setEmployeeName] = useState('');
   const [employeeType, setEmployeeType] = useState('parttime');
@@ -110,8 +115,8 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
       showToast(t('timesheet.calendar_hint'), 'warning');
       return;
     }
-    if (editingId && !editReason.trim()) {
-      showToast(t('timesheet_extra.edit_reason_required'), 'warning');
+    if (editingId && editReason.trim().length < 5) {
+      showToast(t('audit.reason_too_short'), 'warning');
       return;
     }
 
@@ -167,36 +172,20 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
         setSavedEmployees(prev => ({ ...prev, [employeeName.trim()]: empData }));
       }
 
+      // The backend recomputes worked hours and writes the audit log with the change.
       if (editingId) {
-        await updateDoc(doc(db, 'timesheets', editingId), newRecord);
-        setRecords(records.map(r => r.id === editingId ? { ...newRecord, id: editingId } : r));
-
-        try {
-          await addDoc(collection(db, 'audit_logs'), {
-            organizationId,
-            type: 'timesheet_edit',
-            recordId: editingId,
-            employeeName: employeeName.trim(),
-            date: workDate,
-            reason: editReason.trim(),
-            editedAt: serverTimestamp(),
-            newValues: newRecord,
-          });
-        } catch (e) {
-          console.warn('Audit log failed:', e);
-        }
-
+        const { record, unchanged } = await updateTimesheet(editingId, newRecord, editReason.trim());
+        setRecords(previous => previous.map(r => (r.id === editingId ? { ...r, ...record, editedManually: !unchanged || r.editedManually } : r)));
         resetForm();
-        showToast(t('common.success'), 'success');
+        showToast(unchanged ? t('audit.no_changes') : t('audit.saved_with_log'), 'success');
       } else {
-        const finalRecord = { ...newRecord, createdAt: serverTimestamp() };
-        const docRef = await addDoc(collection(db, 'timesheets'), finalRecord);
-        setRecords([...records, { ...finalRecord, id: docRef.id }]);
+        const { record } = await createTimesheet(newRecord);
+        setRecords(previous => [...previous, record]);
         setCheckIn(''); setCheckOut(''); setOtHours(''); setLateHours(''); setRecordStatus('work');
         showToast(t('common.success'), 'success');
       }
-    } catch {
-      showToast(t('common.error'), 'error');
+    } catch (error) {
+      showToast(error.message || t('common.error'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -233,18 +222,31 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Deleting needs a reason, which is kept with a copy of the record in the audit log.
   const handleDelete = (id) => {
     if (demoMode) return showToast(t('demo.no_delete'), 'warning');
-    showConfirm(t('timesheet_extra.confirm_delete_record'), async () => {
-      try {
-        await deleteDoc(doc(db, 'timesheets', id));
-        setRecords(records.filter(r => r.id !== id));
-        if (editingId === id) resetForm();
-        showToast(t('common.success'), 'success');
-      } catch {
-        showToast(t('common.error'), 'error');
-      }
-    });
+    setDeleteReason('');
+    setDeleteTarget(records.find(r => r.id === id) || null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteReason.trim().length < 5) {
+      showToast(t('audit.reason_too_short'), 'warning');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteTimesheet(deleteTarget.id, deleteReason.trim());
+      setRecords(previous => previous.filter(r => r.id !== deleteTarget.id));
+      if (editingId === deleteTarget.id) resetForm();
+      setDeleteTarget(null);
+      showToast(t('audit.deleted_with_log'), 'success');
+    } catch (error) {
+      showToast(error.message || t('common.error'), 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Calendar data
@@ -340,7 +342,10 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
     else if (r.lateHours > 0) statusBadge = <span style={chipStyle('#fef08a', '#a16207')}>{t('timesheet_extra.tag_late')}</span>;
     else if (r.otHours > 0) statusBadge = <span style={chipStyle('#ffedd5', '#c2410c')}>{t('timesheet_extra.tag_ot')}</span>;
     else statusBadge = <span style={chipStyle('#dcfce7', '#1f6b44')}>{t('timesheet_extra.tag_ok')}</span>;
-    return <span style={{ display: 'inline-flex', gap: '4px', flexWrap: 'wrap' }}>{holidayBadge}{statusBadge}</span>;
+    const editedBadge = r.editedManually
+      ? <span style={chipStyle('#f6ece2', '#6b3a1f')} title={t('audit.edited_hint')}><i className="fas fa-pen" aria-hidden="true"></i> {t('audit.edited_badge')}</span>
+      : null;
+    return <span style={{ display: 'inline-flex', gap: '4px', flexWrap: 'wrap' }}>{holidayBadge}{statusBadge}{editedBadge}</span>;
   };
 
   const typeLabel = (name) => {
@@ -882,6 +887,33 @@ export default function TimesheetTab({ records, setRecords, savedEmployees, setS
           </div>
         )}
       </div>
+
+      {!demoMode && <AuditLogPanel db={db} organizationId={organizationId} />}
+
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-record-title">
+            <h3 id="delete-record-title"><i className="fas fa-trash" aria-hidden="true"></i> {t('audit.delete_title')}</h3>
+            <p>{t('audit.delete_body', { name: deleteTarget.employeeName, date: deleteTarget.date })}</p>
+            <label htmlFor="delete-reason" style={{ textAlign: 'left' }}>{t('audit.reason_label')}</label>
+            <textarea
+              id="delete-reason"
+              rows={3}
+              value={deleteReason}
+              onChange={event => setDeleteReason(event.target.value)}
+              placeholder={t('audit.delete_placeholder')}
+              style={{ marginBottom: '16px', resize: 'vertical' }}
+              autoFocus
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn-cancel" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>{t('common.cancel')}</button>
+              <button type="button" className="btn-confirm" onClick={confirmDelete} disabled={isDeleting || deleteReason.trim().length < 5}>
+                {isDeleting ? t('authui.processing') : t('audit.delete_confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -1067,3 +1067,29 @@ button:active:not(:disabled) { transform: scale(0.98); }
   .kiosk-pairing { flex-direction: column; align-items: center; }
   .kiosk-pairing-link { flex-direction: column; }
 }
+
+/* =========================================================
+   15. ATTENDANCE AUDIT LOG
+========================================================= */
+.audit-panel { margin-top: 24px; }
+.audit-head h3 { margin: 0; display: flex; align-items: center; gap: 10px; }
+.audit-head h3 i { color: var(--caramel-600); }
+.audit-head p { margin: 4px 0 0; color: var(--text-muted); max-width: 640px; line-height: 1.5; }
+.audit-empty { margin: 16px 0 0; color: var(--text-muted); }
+.audit-list { list-style: none; margin: 16px 0; padding: 0; display: grid; gap: 10px; }
+.audit-item { display: flex; gap: 14px; padding: 14px; border-radius: var(--radius-md); background: var(--cream-100); border: 1px solid var(--border); }
+.audit-icon { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; }
+.audit-item.tone-success .audit-icon { background: var(--success-soft); color: var(--success); }
+.audit-item.tone-warning .audit-icon { background: var(--warning-soft); color: var(--warning); }
+.audit-item.tone-danger .audit-icon { background: var(--danger-soft); color: var(--danger); }
+.audit-item.tone-info .audit-icon { background: var(--info-soft); color: var(--info); }
+.audit-body { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.audit-summary { margin: 0; font-weight: 700; }
+.audit-reason { margin: 0; color: var(--text-body); font-style: italic; }
+.audit-changes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.audit-changes li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--border); font-size: 0.86rem; }
+.audit-changes span { color: var(--text-muted); font-weight: 600; }
+.audit-changes s { color: var(--danger); }
+.audit-changes b { color: var(--success); }
+.audit-changes i { font-size: 0.7rem; color: var(--text-soft); }
+.audit-body time { color: var(--text-soft); font-size: 0.82rem; }

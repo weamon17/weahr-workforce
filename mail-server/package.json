@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "test:smtp": "node src/verifySmtp.js",
-    "check": "node --check src/server.js && node --check src/app.js && node --check src/attendanceRoutes.js && node --check src/attendanceLogic.js && node --check src/config.js && node --check src/firebaseAdmin.js && node --check src/mailer.js && node --check src/verifySmtp.js && node --check src/billingLogic.js && node --check src/billingRoutes.js",
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/attendanceRoutes.js && node --check src/attendanceLogic.js && node --check src/config.js && node --check src/firebaseAdmin.js && node --check src/mailer.js && node --check src/verifySmtp.js && node --check src/billingLogic.js && node --check src/billingRoutes.js && node --check src/timesheetLogic.js && node --check src/timesheetRoutes.js",
     "test": "node --test"
   },
   "dependencies": {

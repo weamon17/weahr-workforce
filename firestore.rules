@@ -122,10 +122,10 @@ service cloud.firestore {
 
     match /timesheets/{recordId} {
       allow read: if (isManager() && sameOrganization()) || ownsResource();
-      // Employee attendance writes must go through trusted callable functions.
-      allow create: if isManager() && sameNewOrganization();
-      allow update: if isManager() && sameOrganization() && sameNewOrganization();
-      allow delete: if isManager() && sameOrganization();
+      // All attendance writes go through the backend: QR check-in/out for
+      // employees, /v1/timesheets for managers. Each manual change is written
+      // together with its audit-log entry, so no client may write here.
+      allow create, update, delete: if false;
     }
 
     match /attendance_settings/{organizationDocumentId} {
@@ -225,8 +225,9 @@ service cloud.firestore {
     // Audit history is append-only so payroll disputes keep their evidence.
     match /audit_logs/{documentId} {
       allow read: if isManager() && sameOrganization();
-      allow create: if isManager() && sameNewOrganization();
-      allow update, delete: if false;
+      // Written only by the backend in the same transaction as the change it
+      // records, so entries can be neither forged, skipped, edited nor removed.
+      allow create, update, delete: if false;
     }
 
     match /schedule_settings/{organizationDocumentId} {

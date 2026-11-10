@@ -109,8 +109,13 @@ test('shift swap claims stay in-tenant and cannot self-approve', async () => {
   assert.match(panel, /if \(!offeredShift\) throw new Error\(t\('scheduler\.swap_shift_gone'\)\)/);
 });
 
-test('audit logs are append-only', async () => {
+test('audit logs and attendance are written only by the backend', async () => {
   const rules = await read('firestore.rules');
   const audit = rules.slice(rules.indexOf('match /audit_logs/'), rules.indexOf('match /schedule_settings/'));
-  assert.match(audit, /allow update, delete: if false;/);
+  assert.match(audit, /allow create, update, delete: if false;/);
+  const timesheets = rules.slice(rules.indexOf('match /timesheets/'), rules.indexOf('match /attendance_settings/'));
+  assert.match(timesheets, /allow create, update, delete: if false;/);
+  for (const file of ['src/components/TimesheetTab.jsx', 'src/components/EmployeeTab.jsx']) {
+    assert.doesNotMatch(await read(file), /doc\(db, 'timesheets'|collection\(db, 'audit_logs'/);
+  }
 });

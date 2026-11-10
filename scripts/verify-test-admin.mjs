@@ -42,12 +42,16 @@ try {
   const organizationSnapshot = await getDoc(doc(db, 'organizations', expectedOrganizationId));
   if (!organizationSnapshot.exists()) throw new Error('Không tìm thấy workspace test.');
 
-  const probeRef = doc(db, 'audit_logs', `test_admin_probe_${credential.user.uid}`);
+  // Sales rows are manager-writable and deletable, so they make a safe probe.
+  // (Attendance and audit logs are backend-only.)
+  const probeRef = doc(db, 'sales_records', `test_admin_probe_${credential.user.uid}`);
   await setDoc(probeRef, {
     organizationId: expectedOrganizationId,
-    action: 'local_test_admin_permission_probe',
-    actorId: credential.user.uid,
-    actorEmail: email,
+    date: '2000-01-01',
+    hour: 0,
+    revenue: 0,
+    orders: 0,
+    branchId: 'probe',
     createdAt: serverTimestamp(),
   });
   const probeSnapshot = await getDoc(probeRef);

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
+import { renameTimesheetEmployee } from '../services/timesheetApi';
 import { buildEmployeeDocumentId } from '../utils/employee';
 import { localDateString, localMonthString } from '../utils/time';
 import { employeeSkills, normalizeSkills, POSITION_OPTIONS } from '../utils/skills';
@@ -159,10 +160,8 @@ export default function EmployeeTab({
             fullName: newName,
           });
         } else {
-          const tsToUpdate = records.filter(r => r.employeeName === editingName);
-          for (const r of tsToUpdate) {
-            await updateDoc(doc(db, 'timesheets', r.id), { employeeName: newName });
-          }
+          // Attendance records are renamed (and logged) by the backend.
+          await renameTimesheetEmployee(editingName, newName);
           const penToUpdate = (appliedPenalties || []).filter(p => p.employeeName === editingName);
           for (const p of penToUpdate) {
             await updateDoc(doc(db, 'penalties', p.id), { employeeName: newName });
