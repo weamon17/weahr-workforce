@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useTranslation } from 'react-i18next';
 import { functions } from '../../firebase';
+import BillingPanel from './BillingPanel';
 
 const formatDate = (value, locale) => {
   const date = value?.toDate ? value.toDate() : new Date(value);
@@ -16,7 +17,7 @@ const statusMeta = {
   revoked: { labelKey: 'org.status_revoked', color: '#75665b', background: '#f5eee6' },
 };
 
-export default function OrganizationSettingsTab({ db, organizationId, userProfile, showToast }) {
+export default function OrganizationSettingsTab({ db, organizationId, userProfile, showToast, organization: liveOrganization }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
   const [organization, setOrganization] = useState(null);
@@ -47,12 +48,6 @@ export default function OrganizationSettingsTab({ db, organizationId, userProfil
   }, [db, organizationId, showToast, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  const trialDaysLeft = useMemo(() => {
-    const end = organization?.trialEndsAt?.toDate?.();
-    if (!end) return null;
-    return Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000));
-  }, [organization]);
 
   const createInvitation = async event => {
     event.preventDefault();
@@ -96,35 +91,34 @@ export default function OrganizationSettingsTab({ db, organizationId, userProfil
     }
   };
 
+  // The app keeps a live copy of the organization so a payment shows up at once.
+  const shown = liveOrganization || organization;
+
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px' }}>
-      <div className="section-header" style={{ marginBottom: '22px' }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      <div className="page-head">
         <div>
-          <p style={{ margin: '0 0 6px', color: '#6b3a1f', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.08em' }}>SAAS WORKSPACE</p>
-          <h2 style={{ margin: 0 }}>{t('org.title')}</h2>
-          <p style={{ color: '#75665b', margin: '8px 0 0' }}>{t('org.subtitle')}</p>
+          <h2 className="page-title">{t('org.title')}</h2>
+          <p className="page-sub">{t('org.subtitle')}</p>
         </div>
       </div>
 
-      <div className="grid-3" style={{ marginBottom: '22px' }}>
-        <div className="card">
-          <div style={{ color: '#75665b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.business')}</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px' }}>{organization?.name || organizationId}</div>
-          <div style={{ color: '#75665b', marginTop: '6px', fontSize: '0.86rem' }}>{t('org.owner', { name: userProfile?.fullName || userProfile?.email })}</div>
+      <div className="grid-2" style={{ marginBottom: '22px' }}>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 700 }}>{t('org.business')}</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '8px' }}>{shown?.name || organizationId}</div>
+          <div style={{ color: 'var(--text-muted)', marginTop: '6px', fontSize: '0.9rem' }}>{t('org.owner', { name: userProfile?.fullName || userProfile?.email })}</div>
         </div>
-        <div className="card">
-          <div style={{ color: '#75665b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.current_plan')}</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px', color: '#6b3a1f' }}>{organization?.plan === 'trial' ? t('org.plan_trial') : organization?.plan || t('org.plan_unset')}</div>
-          <div style={{ color: '#75665b', marginTop: '6px', fontSize: '0.86rem' }}>{trialDaysLeft === null ? t('org.no_end_date') : t('org.days_left', { count: trialDaysLeft })}</div>
-        </div>
-        <div className="card">
-          <div style={{ color: '#75665b', fontSize: '0.82rem', fontWeight: 700 }}>{t('org.pilot_limits')}</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '8px' }}>{t('org.limit_employees', { count: organization?.limits?.employees || 30 })}</div>
-          <div style={{ color: '#75665b', marginTop: '6px', fontSize: '0.86rem' }}>{t('org.limit_branches_managers', { branches: organization?.limits?.branches || 2, managers: organization?.limits?.managers || 3 })}</div>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 700 }}>{t('org.plan_limits')}</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '8px' }}>{t('org.limit_employees', { count: shown?.limits?.employees || 30 })}</div>
+          <div style={{ color: 'var(--text-muted)', marginTop: '6px', fontSize: '0.9rem' }}>{t('org.limit_branches_managers', { branches: shown?.limits?.branches || 2, managers: shown?.limits?.managers || 3 })}</div>
         </div>
       </div>
+
+      <BillingPanel db={db} organization={shown} isOwner={userProfile?.isOrganizationOwner === true} showToast={showToast} />
 
       <div className="grid-2" style={{ alignItems: 'start' }}>
         <div className="card">

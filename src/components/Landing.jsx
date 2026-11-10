@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrandLogo, BrandMark } from './brand/BrandLogo';
+import { BILLING_CYCLES, PLAN_IDS, PLANS, quoteOrder } from '../utils/billing';
 import './Landing.css';
+
+const money = value => new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
 
 const FEATURES = [
   { icon: 'fas fa-qrcode', key: 'attendance' },
@@ -49,6 +52,7 @@ function HeroPreview({ t }) {
 export default function Landing({ onStart, onLogin }) {
   const { t, i18n } = useTranslation();
   const toggleLanguage = () => i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi');
+  const [cycle, setCycle] = useState('monthly');
 
   return (
     <div className="landing">
@@ -132,6 +136,52 @@ export default function Landing({ onStart, onLogin }) {
             <button type="button" className="landing-btn landing-btn-primary" onClick={onStart}>
               {t('landing.start_trial')} <i className="fas fa-arrow-right" aria-hidden="true"></i>
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-section" id="pricing">
+        <div className="landing-container">
+          <h2>{t('landing.pricing_title')}</h2>
+          <p className="landing-pricing-sub">{t('landing.pricing_sub')}</p>
+          <div className="landing-pricing-toolbar">
+            <div className="segmented" role="group" aria-label={t('billing.cycle_label')}>
+              {Object.keys(BILLING_CYCLES).map(id => (
+                <button key={id} type="button" className={cycle === id ? 'active' : ''} aria-pressed={cycle === id} onClick={() => setCycle(id)}>
+                  {t(`billing.cycle_${id}`)}
+                </button>
+              ))}
+            </div>
+            <span className="billing-save">{t('billing.yearly_saving')}</span>
+          </div>
+          <div className="plan-grid">
+            {PLAN_IDS.map(planId => {
+              const plan = PLANS[planId];
+              const quote = quoteOrder(planId, cycle);
+              return (
+                <article key={planId} className={`plan-card ${plan.recommended ? 'is-recommended' : ''}`}>
+                  {plan.recommended && <span className="plan-ribbon">{t('billing.recommended')}</span>}
+                  <h3>{t(`billing.plan_${planId}`)}</h3>
+                  <p className="plan-for">{t(`billing.plan_${planId}_for`)}</p>
+                  <div className="plan-price">
+                    <strong>{money(Math.round(quote.amount / quote.months))}</strong>
+                    <span>{t('billing.per_month')}</span>
+                  </div>
+                  <p className="plan-billed">
+                    {cycle === 'yearly' ? t('billing.billed_yearly', { amount: money(quote.amount) }) : t('billing.billed_monthly')}
+                  </p>
+                  <ul className="plan-limits">
+                    <li><i className="fas fa-check" aria-hidden="true"></i> {t('billing.limit_employees', { count: plan.limits.employees })}</li>
+                    <li><i className="fas fa-check" aria-hidden="true"></i> {t('billing.limit_branches', { count: plan.limits.branches })}</li>
+                    <li><i className="fas fa-check" aria-hidden="true"></i> {t('billing.limit_managers', { count: plan.limits.managers })}</li>
+                    <li><i className="fas fa-check" aria-hidden="true"></i> {t('billing.all_features')}</li>
+                  </ul>
+                  <button type="button" className={plan.recommended ? 'btn-primary' : 'btn-secondary'} onClick={onStart}>
+                    {t('landing.pricing_cta')}
+                  </button>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>

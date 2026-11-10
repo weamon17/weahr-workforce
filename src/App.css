@@ -930,6 +930,8 @@ button:active:not(:disabled) { transform: scale(0.98); }
   font-size: 0.95rem;
 }
 .trial-banner a { font-weight: 700; white-space: nowrap; }
+.trial-banner-action { min-height: 36px; padding: 6px 14px; background: rgba(255, 255, 255, 0.7); border: 1px solid currentColor; white-space: nowrap; }
+.trial-banner-action:hover { background: #fff; }
 
 .onboarding-card {
   max-width: 1200px;
@@ -965,4 +967,71 @@ button:active:not(:disabled) { transform: scale(0.98); }
   .onboarding-card { padding: 16px; }
   .onboarding-step { flex-wrap: wrap; }
   .onboarding-step button { width: calc(100% - 46px); margin-left: 46px; }
+}
+
+/* =========================================================
+   13. BILLING — plans, VietQR checkout
+========================================================= */
+.billing-panel { scroll-margin-top: 20px; }
+.billing-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.billing-head h3 { margin: 0; }
+.billing-status { display: grid; gap: 2px; min-width: 220px; padding: 14px 16px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--cream-100); }
+.billing-status small { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+.billing-status strong { font-size: 1.15rem; }
+.billing-status span { font-size: 0.88rem; color: var(--text-muted); }
+.billing-status.tone-success { background: var(--success-soft); border-color: #bfe3cc; }
+.billing-status.tone-success strong { color: var(--success); }
+.billing-status.tone-warning { background: var(--warning-soft); border-color: #f3d79c; }
+.billing-status.tone-warning strong { color: var(--warning); }
+.billing-status.tone-danger { background: var(--danger-soft); border-color: #f2c4bd; }
+.billing-status.tone-danger strong { color: var(--danger); }
+.billing-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.billing-save { padding: 5px 11px; border-radius: 999px; background: var(--caramel-100); color: var(--espresso-600); font-size: 0.85rem; font-weight: 700; }
+.billing-note { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 0; color: var(--text-muted); font-size: 0.92rem; line-height: 1.5; }
+.billing-note i { color: var(--caramel-600); margin-top: 3px; }
+
+.plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 14px; }
+.plan-card { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: var(--radius-lg); background: #fff; border: 1.5px solid var(--border); }
+.plan-card.is-recommended { border-color: var(--caramel-500); box-shadow: 0 12px 28px rgba(201, 122, 44, 0.16); }
+.plan-card.is-current { border-color: var(--success); }
+.plan-ribbon { position: absolute; top: -12px; left: 20px; padding: 3px 12px; border-radius: 999px; background: var(--caramel-500); color: var(--espresso-900); font-size: 0.78rem; font-weight: 800; }
+.plan-card h4 { margin: 0; font-size: 1.2rem; }
+.plan-for { margin: 0; color: var(--text-muted); font-size: 0.92rem; min-height: 2.6em; }
+.plan-price { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.plan-price strong { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em; color: var(--espresso-900); }
+.plan-price span { color: var(--text-muted); font-weight: 600; }
+.plan-billed { margin: -4px 0 0; color: var(--text-muted); font-size: 0.86rem; }
+.plan-limits { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 8px; flex: 1; }
+.plan-limits li { display: flex; gap: 10px; align-items: baseline; font-size: 0.95rem; }
+.plan-limits i { color: var(--success); }
+.plan-card button { width: 100%; }
+
+.checkout { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 26px; align-items: start; }
+.checkout-qr { display: grid; justify-items: center; gap: 10px; padding: 18px; border-radius: var(--radius-lg); background: #fff; border: 1.5px solid var(--border); text-align: center; }
+.checkout-qr img { display: block; width: 240px; height: 240px; }
+.checkout-qr .spinner { margin: 98px; }
+.checkout-qr p { margin: 0; max-width: 240px; color: var(--text-muted); font-size: 0.88rem; }
+.checkout-info { display: grid; gap: 10px; min-width: 0; }
+.checkout-info h4 { margin: 0 0 4px; font-size: 1.2rem; }
+.pay-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--cream-100); }
+.pay-row-label { width: 120px; flex-shrink: 0; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
+.pay-row-value { flex: 1; min-width: 0; font-weight: 800; font-size: 1.02rem; overflow-wrap: anywhere; }
+.pay-copy { min-height: 36px; width: 38px; padding: 0; background: #fff; color: var(--espresso-600); border: 1px solid var(--border-strong); }
+.checkout-warning { display: flex; gap: 10px; margin: 4px 0 0; padding: 12px 14px; border-radius: var(--radius-md); background: var(--warning-soft); color: #7a4f08; font-size: 0.92rem; line-height: 1.5; }
+.checkout-status { display: flex; align-items: center; gap: 10px; margin: 4px 0 0; color: var(--text-body); font-weight: 600; }
+.checkout-status.is-warning { color: var(--warning); }
+.spinner-sm { width: 18px; height: 18px; border-width: 3px; }
+.checkout-result { display: grid; justify-items: center; gap: 8px; padding: 30px 16px; text-align: center; }
+.checkout-result i { font-size: 3rem; color: var(--success); }
+.checkout-result h4 { margin: 4px 0 0; font-size: 1.35rem; }
+.checkout-result p { margin: 0 0 8px; color: var(--text-muted); max-width: 460px; }
+
+@media (max-width: 900px) {
+  .plan-grid { grid-template-columns: 1fr; }
+  .checkout { grid-template-columns: 1fr; }
+  .checkout-qr { justify-self: center; }
+}
+@media (max-width: 600px) {
+  .billing-status { width: 100%; }
+  .pay-row-label { width: 92px; }
 }

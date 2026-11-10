@@ -151,6 +151,17 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Payment orders and bank transactions are written only by the billing
+    // backend; managers may watch their own shop's orders to see payment land.
+    match /billing_orders/{orderCode} {
+      allow read: if isManager() && sameOrganization();
+      allow create, update, delete: if false;
+    }
+
+    match /billing_transactions/{transactionId} {
+      allow read, write: if false;
+    }
+
     // Rate-limit state is managed only by trusted email Cloud Functions.
     match /email_dispatch_limits/{documentId} {
       allow read, write: if false;

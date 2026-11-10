@@ -34,6 +34,15 @@ export const config = Object.freeze({
   emailCooldownMs: integer(process.env.EMAIL_COOLDOWN_SECONDS, 60, 30, 3600) * 1000,
   ipWindowMs: integer(process.env.IP_WINDOW_SECONDS, 900, 60, 86400) * 1000,
   ipMaxRequests: integer(process.env.IP_MAX_REQUESTS, 10, 2, 100),
+  // Receiving bank account for subscription payments (VietQR) and the API key
+  // SePay sends with every bank-transaction webhook.
+  billing: Object.freeze({
+    bankName: String(process.env.BILLING_BANK_NAME || '').trim().slice(0, 80),
+    bankBin: String(process.env.BILLING_BANK_BIN || '').replace(/\D/g, ''),
+    accountNumber: String(process.env.BILLING_ACCOUNT_NUMBER || '').replace(/\s/g, ''),
+    accountName: String(process.env.BILLING_ACCOUNT_NAME || '').trim().toUpperCase().slice(0, 80),
+    webhookApiKey: String(process.env.SEPAY_WEBHOOK_API_KEY || '').trim(),
+  }),
 });
 
 export const assertConfig = () => {

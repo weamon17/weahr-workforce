@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useTranslation } from 'react-i18next';
 import { db, auth } from './firebase';
@@ -20,6 +20,7 @@ const DashboardTab = lazy(() => import('./components/manager/DashboardTab'));
 const ScheduleTab = lazy(() => import('./components/manager/ScheduleTab'));
 const BusinessInsightsTab = lazy(() => import('./components/manager/BusinessInsightsTab'));
 const OrganizationSettingsTab = lazy(() => import('./components/manager/OrganizationSettingsTab'));
+const BillingPanel = lazy(() => import('./components/manager/BillingPanel'));
 const TrialBanner = lazy(() => import('./components/manager/TrialBanner'));
 const OnboardingChecklist = lazy(() => import('./components/manager/OnboardingChecklist'));
 const EmployeePortal = lazy(() => import('./components/employee/EmployeePortal'));
@@ -155,14 +156,13 @@ export default function App() {
         );
         // Timesheets and schedules grow every day, so only recent months load up front.
         const from = monthStart(new Date(), HISTORY_MONTHS - 1);
-        const [empSnap, timesheets, penSnap, bonusSnap, recentSchedules, profileSnap, organizationSnap] = await Promise.all([
+        const [empSnap, timesheets, penSnap, bonusSnap, recentSchedules, profileSnap] = await Promise.all([
           getDocs(organizationQuery('employees')),
           loadDatedDocuments(db, 'timesheets', organizationId, { from }),
           getDocs(organizationQuery('penalties')),
           getDocs(organizationQuery('bonuses')),
           loadDatedDocuments(db, 'schedules', organizationId, { from }),
           getDocs(organizationQuery('employee_profiles')),
-          getDoc(doc(db, 'organizations', organizationId)),
         ]);
         const toEntries = snapshot => snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
         historyFromRef.current = from;
@@ -172,7 +172,6 @@ export default function App() {
         setAppliedPenalties(penSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         setAppliedBonuses(bonusSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         setSchedules(recentSchedules);
-        setOrganization(organizationSnap.exists() ? organizationSnap.data() : null);
       } catch (err) {
         console.error(err);
         showToast(i18n.t('app.load_failed'), 'error');
@@ -180,6 +179,17 @@ export default function App() {
     };
     initialLoadRef.current = fetchData();
   }, [currentUser, userProfile, showToast, demoMode, i18n]);
+
+  // Live organization: plan and payment status update the moment a payment lands.
+  useEffect(() => {
+    const organizationId = userProfile?.organizationId;
+    if (!currentUser || userProfile?.role !== 'manager' || demoMode || !organizationId) return undefined;
+    return onSnapshot(
+      doc(db, 'organizations', organizationId),
+      snapshot => setOrganization(snapshot.exists() ? snapshot.data() : null),
+      error => console.error(error),
+    );
+  }, [currentUser, userProfile?.role, userProfile?.organizationId, demoMode]);
 
   // Fetches an older month's timesheets and schedules when a screen needs it.
   const ensureMonthLoaded = useCallback(async month => {
@@ -265,7 +275,7 @@ export default function App() {
     { key: 'employee', icon: 'fas fa-users', label: t('nav.employees') },
     { key: 'insights', icon: 'fas fa-chart-line', label: t('nav.insights') },
     { key: 'organization', icon: 'fas fa-store', label: t('nav.organization') },
-  ].filter(tab => !demoMode || tab.key !== 'organization');
+  ];
 
   return (
     <Suspense fallback={loadingScreen}>
@@ -320,7 +330,7 @@ export default function App() {
               <i className="fas fa-flask" aria-hidden="true"></i> {t('app.demo_banner')}
             </div>
           )}
-          {!demoMode && <TrialBanner organization={organization} />}
+          {!demoMode && <TrialBanner organization={organization} onUpgrade={() => setActiveTab('organization')} />}
           {!demoMode && activeTab === 'dashboard' && (
             <OnboardingChecklist
               db={db}
@@ -405,11 +415,17 @@ export default function App() {
               showToast={showToast}
             />
           )}
-          {activeTab === 'organization' && (
+          {activeTab === 'organization' && demoMode && (
+            <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+              <BillingPanel db={db} organization={organization} isOwner={false} showToast={showToast} />
+            </div>
+          )}
+          {activeTab === 'organization' && !demoMode && (
             <OrganizationSettingsTab
               db={db}
               organizationId={userProfile.organizationId}
               userProfile={userProfile}
+              organization={organization}
               showToast={showToast}
             />
           )}

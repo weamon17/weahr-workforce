@@ -15,6 +15,7 @@ let env;
 
 const users = {
   managerA: { role: 'manager', status: 'active', organizationId: ORG_A },
+  ownerA: { role: 'manager', status: 'active', organizationId: ORG_A, isOrganizationOwner: true },
   employeeA1: { role: 'employee', status: 'active', organizationId: ORG_A },
   employeeA2: { role: 'employee', status: 'active', organizationId: ORG_A },
   suspendedA: { role: 'employee', status: 'suspended', organizationId: ORG_A },
@@ -66,6 +67,9 @@ beforeEach(async () => {
       setDoc(doc(admin, 'timesheets', 'ts-a'), { organizationId: ORG_A, employeeId: 'employeeA1', date: '2026-09-25' }),
       setDoc(doc(admin, 'audit_logs', 'log-1'), { organizationId: ORG_A, action: 'edit' }),
       setDoc(doc(admin, 'shift_swap_requests', swapId), openSwap),
+      setDoc(doc(admin, 'organizations', ORG_A), { organizationId: ORG_A, ownerId: 'ownerA', name: 'Quán A', plan: 'trial', subscriptionStatus: 'trialing' }),
+      setDoc(doc(admin, 'billing_orders', 'WEAAAAAAAA2'), { organizationId: ORG_A, code: 'WEAAAAAAAA2', amount: 399000, status: 'pending' }),
+      setDoc(doc(admin, 'billing_transactions', 'sepay_1'), { organizationId: ORG_A, amount: 399000 }),
     ]);
   });
 });
@@ -175,5 +179,25 @@ describe('onboarding checklist queries', () => {
     await assertSucceeds(count('managerA', 'sales_records'));
     await assertFails(count('employeeA1', 'organization_invitations'));
     await assertFails(count('managerA', 'sales_records', ORG_B));
+  });
+});
+
+describe('billing', () => {
+  test('managers watch their own payment orders; employees and other shops cannot', async () => {
+    await assertSucceeds(getDoc(doc(db('managerA'), 'billing_orders', 'WEAAAAAAAA2')));
+    await assertSucceeds(getDoc(doc(db('ownerA'), 'billing_orders', 'WEAAAAAAAA2')));
+    await assertFails(getDoc(doc(db('employeeA1'), 'billing_orders', 'WEAAAAAAAA2')));
+    await assertFails(getDoc(doc(db('employeeB'), 'billing_orders', 'WEAAAAAAAA2')));
+  });
+
+  test('payment state is written only by the billing backend', async () => {
+    await assertFails(setDoc(doc(db('ownerA'), 'billing_orders', 'WEABBBBBBB3'), { organizationId: ORG_A, amount: 1, status: 'paid' }));
+    await assertFails(updateDoc(doc(db('ownerA'), 'billing_orders', 'WEAAAAAAAA2'), { status: 'paid' }));
+    await assertFails(getDoc(doc(db('ownerA'), 'billing_transactions', 'sepay_1')));
+  });
+
+  test('an owner can rename the shop but cannot activate a plan', async () => {
+    await assertSucceeds(updateDoc(doc(db('ownerA'), 'organizations', ORG_A), { name: 'Quán A mới' }));
+    await assertFails(updateDoc(doc(db('ownerA'), 'organizations', ORG_A), { subscriptionStatus: 'active', plan: 'chain' }));
   });
 });

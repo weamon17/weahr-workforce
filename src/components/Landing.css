@@ -152,3 +152,9 @@
   .landing-audience { flex-direction: column; align-items: flex-start; gap: 16px; }
   .landing-footer-inner { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Pricing ── */
+.landing-pricing-sub { max-width: 640px; margin: -24px auto 26px; text-align: center; color: var(--text-muted); font-size: 1.05rem; line-height: 1.6; }
+.landing-pricing-toolbar { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; }
+.landing .plan-card h3 { margin: 0; font-size: 1.25rem; }
+.landing .plan-grid { align-items: stretch; }

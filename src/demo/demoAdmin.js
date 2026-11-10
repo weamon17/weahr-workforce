@@ -57,7 +57,7 @@ export const createDemoAdminSession = email => {
   return {
     currentUser: { uid: 'demo-admin-local', email, emailVerified: true },
     userProfile: { uid: 'demo-admin-local', email, fullName: 'Admin Demo', role: 'manager', status: 'active', isOrganizationOwner: true, organizationId: 'demo-org' },
-    organization: { organizationId: 'demo-org', name: 'Quán Cà Phê Mẫu', subscriptionStatus: 'demo' },
+    organization: { organizationId: 'demo-org', name: 'Quán Cà Phê Mẫu', plan: 'trial', subscriptionStatus: 'trialing', trialEndsAt: new Date(Date.now() + 9 * 86400000) },
     employees,
     records,
     schedules,
